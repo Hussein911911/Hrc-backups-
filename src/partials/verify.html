@@ -1,0 +1,65 @@
+<!-- ============================== صفحة التحقق من بطاقة التوظيف ============================== -->
+<section class="verify-hero">
+  <div class="container">
+    <div class="flex-between flex-wrap">
+      <div>
+        <span class="hero-badge" style="margin-bottom:12px">
+          <svg class="ic"><use href="#i-qr" xlink:href="#i-qr"/></svg>
+          أداة داخلية — للموظفين والإدارة
+        </span>
+        <h1 style="color:#fff;font-size:clamp(1.4rem,3vw,2.1rem);margin-bottom:6px">التحقق من بطاقة توظيف منصة مكسب</h1>
+        <p style="color:#c3cee5;margin:0;max-width:70ch">
+          امسح الباركود أو أدخل رقم البطاقة. <b>للموظفين والإدارة فقط.</b>
+        </p>
+      </div>
+      <a href="index.html" class="btn btn-ghost">
+        <svg class="ic"><use href="#i-arrow-left" xlink:href="#i-arrow-left"/></svg> العودة للموقع
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="container" style="padding-bottom:60px">
+  <div class="verify-card" id="verify-root">
+    <div class="table-empty">جارٍ التحقق...</div>
+  </div>
+
+  <div class="panel mt-3">
+    <div class="panel-head">
+      <h3><svg class="ic"><use href="#i-qr" xlink:href="#i-qr"/></svg> البحث اليدوي بالرقم التسلسلي</h3>
+    </div>
+    <div class="panel-body">
+      <form class="toolbar" id="verify-form" autocomplete="off">
+        <div class="field grow">
+          <label for="v-serial">الرقم التسلسلي للبطاقة</label>
+          <input type="text" id="v-serial" placeholder="7KQ4M9TR2X" required>
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <button class="btn btn-lapis" type="submit"><svg class="ic"><use href="#i-shield" xlink:href="#i-shield"/></svg> تحقق</button>
+        </div>
+      </form>
+      <p class="tiny muted mt-2 mb-0">
+        الرقم كما هو مطبوع على البطاقة: <b class="mono" dir="ltr">7KQ4M9TR2X</b>
+      </p>
+    </div>
+  </div>
+
+  <div class="grid grid-3 mt-3 verify-hints">
+    <div class="contact-card" style="text-align:right">
+      <div class="ic" style="margin:0 0 12px"><svg class="ic"><use href="#i-shield" xlink:href="#i-shield"/></svg></div>
+      <h3>ما معنى «سارية»؟</h3>
+      <p>البطاقة ضمن صلاحيتها ويمكن استخدام فرصها المتبقية.</p>
+    </div>
+    <div class="contact-card" style="text-align:right">
+      <div class="ic" style="margin:0 0 12px"><svg class="ic"><use href="#i-clock" xlink:href="#i-clock"/></svg></div>
+      <h3>«حرجة — بانتظار قرار الشركة»</h3>
+      <p>انتهت مهلة 24 ساعة. الشركة تقرر التوظيف أو الإرجاع أو الحذف؛ الفرصة المستهلكة لا تعود.</p>
+    </div>
+    <div class="contact-card" style="text-align:right">
+      <div class="ic" style="margin:0 0 12px"><svg class="ic"><use href="#i-alert" xlink:href="#i-alert"/></svg></div>
+      <h3>بطاقة غير موجودة</h3>
+      <p>تأكد من الرقم، ثم تواصل مع المكتب إن لم تظهر البطاقة.</p>
+    </div>
+  </div>
+</div>
