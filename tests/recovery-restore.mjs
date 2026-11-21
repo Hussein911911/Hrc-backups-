@@ -60,7 +60,13 @@ spawn('node', ['tools/build-full-dump.mjs', '--payload', payPath, '--out', sqlPa
     /* ═══ ٢) الدوال المستقلة ═══ */
     const core = await import('../tools/recovery-core.mjs');
     const targetUri = 'postgresql://local-user:local-placeholder@db.tkxbmopxcftxpcoczweq.supabase.co:5432/postgres';
-    check('رابط الهدف المصرّح به مقبول', core.assertTargetConnectionString(targetUri) === true);
+    check('رابط الهدف المباشر المصرّح به مقبول', core.assertTargetConnectionString(targetUri) === true);
+    const poolerUri = 'postgresql://postgres.tkxbmopxcftxpcoczweq:local-placeholder@aws-0-eu-west-1.pooler.supabase.com:5432/postgres';
+    check('رابط Session pooler للهدف المصرّح به مقبول', core.assertTargetConnectionString(poolerUri) === true);
+    let wrongPoolerUserRejected = false;
+    try { core.assertTargetConnectionString('postgresql://postgres.other-project:local-placeholder@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'); }
+    catch { wrongPoolerUserRejected = true; }
+    check('Session pooler لمشروع آخر مرفوض قبل الاتصال', wrongPoolerUserRejected);
     let otherTargetRejected = false;
     try { core.assertTargetConnectionString('postgresql://local-user:local-placeholder@db.other-project.supabase.co:5432/postgres'); }
     catch { otherTargetRejected = true; }

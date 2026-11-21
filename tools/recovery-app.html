@@ -104,11 +104,11 @@
   <section class="card">
     <h2><span class="num">٢</span> المشروع الجديد</h2>
     <label for="conn">رابط الاتصال بقاعدة المشروع الجديد</label>
-    <input type="password" id="conn" placeholder="postgresql://postgres:كلمة-المرور@db.xxxxx.supabase.co:5432/postgres" autocomplete="off" spellcheck="false">
+    <input type="password" id="conn" placeholder="postgresql://postgres.PROJECT_REF:كلمة-المرور@aws-0-REGION.pooler.supabase.com:5432/postgres" autocomplete="off" spellcheck="false">
     <p class="hint">
-      من لوحة المشروع الجديد: <b>Connect</b> ← تبويب <b>Direct connection</b> ← انسخ الرابط
-      واستبدل <code>[YOUR-PASSWORD]</code> بكلمة مرور القاعدة. تبقى في ذاكرة هذه الأداة فقط،
-      ولا تُكتب في أي ملف.
+      من لوحة المشروع الجديد: <b>Connect</b> ← تبويب <b>Session pooler</b> ← انسخ الرابط
+      واستبدل <code>[YOUR-PASSWORD]</code> بكلمة مرور القاعدة. استخدم <b>Session</b> وليس Transaction.
+      تبقى كلمة المرور في ذاكرة هذه الأداة فقط، ولا تُكتب في أي ملف.
     </p>
     <div class="btn-row">
       <button class="btn-ghost" id="btn-inspect">افحص القاعدة الهدف أولاً</button>
@@ -267,7 +267,7 @@
           if (!r.prereq.extensions) miss.push('سكيما <code>extensions</code>');
           say('inspect-status', 'err',
             '! هذا الرابط <b>لا يبدو مشروع Supabase</b> — ناقص: ' + miss.join('، ') +
-            '.<br>تأكد أنك نسخت رابط <b>Direct connection</b> من المشروع الجديد نفسه. أوقفتُ الفحص هنا.');
+            '.<br>تأكد أنك نسخت رابط <b>Session pooler</b> من المشروع الهدف نفسه. أوقفتُ الفحص هنا.');
           return;
         }
         if (!r.hasBrc) {

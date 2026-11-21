@@ -37,6 +37,9 @@ import { fileURLToPath } from 'node:url';
    لا تُمرّر كلمة المرور أو رابط الاتصال إلى السجلات أو التقارير. */
 export const EXPECTED_PROJECT_REF = 'tkxbmopxcftxpcoczweq';
 export const EXPECTED_DATABASE_HOST = `db.${EXPECTED_PROJECT_REF}.supabase.co`;
+// The direct database endpoint is IPv6-only on some Supabase projects. The
+// session pooler endpoint for this project's eu-west-1 region supports IPv4.
+export const EXPECTED_SESSION_POOLER_HOST = 'aws-0-eu-west-1.pooler.supabase.com';
 
 export function assertTargetConnectionString(connectionString) {
   let u;
@@ -45,11 +48,15 @@ export function assertTargetConnectionString(connectionString) {
   if (!['postgres:', 'postgresql:'].includes(u.protocol)) {
     throw new Error('يُسمح فقط برابط PostgreSQL للمشروع المحدد.');
   }
-  if (u.hostname.toLowerCase() !== EXPECTED_DATABASE_HOST) {
-    throw new Error('تم رفض الاتصال: الرابط لا يطابق مشروع الاسترجاع المصرّح به.');
+  const host = u.hostname.toLowerCase();
+  const isDirect = host === EXPECTED_DATABASE_HOST;
+  const isSessionPooler = host === EXPECTED_SESSION_POOLER_HOST &&
+    decodeURIComponent(u.username) === `postgres.${EXPECTED_PROJECT_REF}`;
+  if (!isDirect && !isSessionPooler) {
+    throw new Error('تم رفض الاتصال: الرابط لا يطابق مشروع الاسترجاع المصرّح به. استخدم Direct connection أو Session pooler للمشروع المحدد.');
   }
   if ((u.port || '5432') !== '5432' || decodeURIComponent(u.pathname || '') !== '/postgres') {
-    throw new Error('يُسمح فقط باتصال قاعدة postgres المباشر على المنفذ 5432 للمشروع المحدد.');
+    throw new Error('يُسمح فقط باتصال قاعدة postgres على المنفذ 5432 للمشروع المحدد (Direct أو Session pooler).');
   }
   return true;
 }

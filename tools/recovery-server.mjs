@@ -154,7 +154,7 @@ const server = createServer(async (req, res) => {
            auth.uid()/auth.jwt() وسكيما extensions. التنفيذ على PostgreSQL
            عادي يفشل في منتصف الطريق ويترك قاعدة مشوّهة. نوقف قبل أول جملة. */
         if (!before.looksLikeSupabase) {
-          return json(res, 200, { ok: false, error: 'الرابط لا يبدو مشروع Supabase (ناقص auth/extensions). تأكد أنه رابط Direct connection للمشروع الجديد.', before, report: null });
+          return json(res, 200, { ok: false, error: 'الرابط لا يبدو مشروع Supabase (ناقص auth/extensions). تأكد أنه رابط Session pooler للمشروع الهدف.', before, report: null });
         }
         const report = await executeDump({ run: runner, query: runner, sql });
         lastRun = { at: new Date().toISOString(), counts: report.counts, failed: report.failed, before };
