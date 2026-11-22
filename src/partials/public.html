@@ -1,0 +1,425 @@
+<!-- شريط صفحة التطبيق: يظهر عند فتح صفحة من الشريط السفلي -->
+<div class="page-bar" id="page-bar" hidden>
+  <button type="button" class="pb-back" id="pb-back" aria-label="رجوع للرئيسية">
+    <svg class="ic"><use href="#i-arrow-right" xlink:href="#i-arrow-right"/></svg>
+  </button>
+  <div class="pb-copy"><b id="pb-title">الوظائف</b><span id="pb-sub"></span></div>
+  <span class="pb-badge" id="pb-badge" hidden></span>
+  <button type="button" class="pb-home" id="pb-home" aria-label="الرئيسية">
+    <svg class="ic"><use href="#i-house" xlink:href="#i-house"/></svg>
+  </button>
+</div>
+
+<!-- ============================== الواجهة الرئيسية ============================== -->
+<section class="hero hero-app" id="home" data-page="home">
+  <div class="hero-bg" role="img" aria-label="مدينة بغداد على ضفاف دجلة عند الغروب"></div>
+  <div class="hero-veil"></div>
+
+  <!-- الشعار والوعد في وسط الصورة -->
+  <div class="app-hero">
+    <div class="app-brand brand" data-staff-gate>
+      <span class="app-emblem mk-tile"><svg viewBox="0 0 415 418"><use href="#i-mkseb" xlink:href="#i-mkseb"/></svg></span>
+      <b class="app-wordmark">منصة <span class="accent">مكسب</span> للتوظيف</b>
+      <span class="app-license">🛡️ منصة مرخصة رسمياً | خدمات توظيف معتمدة</span>
+    </div>
+    <h1 class="app-headline">فرصتك لمستقبل أفضل</h1>
+    <p class="app-sub">فرصتك للعمل تبدي من هنا</p>
+    <span class="app-hero-note">نوصلك لأحسن الوظائف وأصحاب العمل بضغطة زر</span>
+  </div>
+</section>
+
+<!-- ============================== البحث السريع ============================== -->
+<section class="app-search-wrap" data-page="jobs">
+  <div class="container">
+    <form class="app-search" id="qs-form" autocomplete="off">
+      <svg class="ic as-ic"><use href="#i-search" xlink:href="#i-search"/></svg>
+      <input type="text" id="qs-code" placeholder="ابحث عن وظيفة، محل أو شركة..." aria-label="كود الوظيفة أو اسمها">
+      <select id="qs-governorate" aria-label="المحافظة" class="as-gov">
+        <option value="all">كل المحافظات</option>
+      </select>
+      <button type="button" class="as-scan" id="qs-scan" title="البحث بمسح الكيو آر كود" aria-label="مسح QR">
+        <svg class="ic"><use href="#i-scan" xlink:href="#i-scan"/></svg>
+      </button>
+      <button class="as-go" type="submit" aria-label="ابحث">
+        <svg class="ic"><use href="#i-arrow-right" xlink:href="#i-arrow-right"/></svg>
+      </button>
+    </form>
+  </div>
+</section>
+
+<!-- ============================== التصنيفات ============================== -->
+<section class="section cats-section" id="categories" data-page="jobs" style="padding-top:10px;padding-bottom:0">
+  <div class="container">
+    <div class="cats-head">
+      <div>
+        <h2><svg class="ic"><use href="#i-grid" xlink:href="#i-grid"/></svg> تصفّح حسب التخصص</h2>
+        <p>اضغط الزر لعرض التخصصات واختيار ما يناسبك</p>
+      </div>
+      <div class="cats-tools">
+        <span class="cats-hint" id="cats-hint"></span>
+        <button type="button" class="cats-toggle" id="cats-toggle" aria-expanded="false" aria-controls="cat-rail">
+          <svg class="ic"><use href="#i-grid" xlink:href="#i-grid"/></svg>
+          <span>عرض التخصصات</span>
+          <svg class="ic chev"><use href="#i-arrow-right" xlink:href="#i-arrow-right"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- مخفيّة حتى تُضغط: لا تُزاحم الصفحة -->
+    <div class="cat-grid is-collapsed" id="cat-rail" role="tablist" aria-label="تصنيفات الوظائف" hidden></div>
+  </div>
+</section>
+
+<!-- ============================== لوحة الوظائف ============================== -->
+<section class="section app-section" id="jobs" data-page="jobs" style="padding-top:22px">
+  <div class="container">
+    <div class="jobs-head">
+      <h2><svg class="ic"><use href="#i-briefcase" xlink:href="#i-briefcase"/></svg> أحدث الوظائف</h2>
+      <button type="button" class="jobs-all" id="jobs-show-all" aria-controls="jobs-grid">عرض الكل <svg class="ic"><use href="#i-arrow-right" xlink:href="#i-arrow-right"/></svg></button>
+    </div>
+    <p class="jobs-sub">حجز الوظيفة 24 ساعة؛ بعدها تصبح حرجة بانتظار قرار الشركة، ولا تعود متاحة تلقائياً.</p>
+
+    <div class="filters" role="search" aria-label="تصفية الوظائف">
+      <div class="f-row">
+      <div class="f-field f-search">
+        <svg class="ic"><use href="#i-search" xlink:href="#i-search"/></svg>
+        <input type="search" id="filter-q" placeholder="بحث بالكود أو العنوان..." aria-label="بحث بالكود أو العنوان">
+      </div>
+      <div class="f-field">
+        <svg class="ic"><use href="#i-pin" xlink:href="#i-pin"/></svg>
+        <select id="filter-governorate" aria-label="المحافظة"><option value="all">كل المحافظات</option></select>
+      </div>
+      <div class="f-field">
+        <svg class="ic"><use href="#i-clock" xlink:href="#i-clock"/></svg>
+        <select id="filter-shift" aria-label="الدوام"><option value="all">كل الأوقات</option></select>
+      </div>
+      <div class="f-field">
+        <svg class="ic"><use href="#i-filter" xlink:href="#i-filter"/></svg>
+        <select id="filter-status" aria-label="الحالة">
+          <option value="all">كل الحالات</option>
+          <option value="available">متاحة</option>
+          <option value="reserved">محجوزة مؤقتاً</option>
+          <option value="closed">مغلقة</option>
+        </select>
+      </div>
+      <button class="btn btn-outline btn-sm f-reset" id="filter-reset" type="button" title="مسح كل عوامل التصفية">
+        <svg class="ic"><use href="#i-refresh" xlink:href="#i-refresh"/></svg> تصفير
+      </button>
+      </div>
+      <div class="f-active" id="f-active" hidden></div>
+    </div>
+
+    <div class="flex-between mb-2">
+      <p class="mb-0 muted small">عدد النتائج: <b id="jobs-count">0</b> وظيفة</p>
+      <p class="mb-0 tiny muted">
+        <svg class="ic" style="width:14px;height:14px;vertical-align:-2px"><use href="#i-clock" xlink:href="#i-clock"/></svg>
+        آخر تحديث للحالات: <span id="jobs-updated">—</span>
+      </p>
+    </div>
+
+    <!-- مراجع صريحة لأيقونات التصنيفات التي يبنيها الكود ديناميكياً -->
+    <svg width="0" height="0" aria-hidden="true" style="position:absolute;opacity:0"><use href="#i-bag" xlink:href="#i-bag"/><use href="#i-list" xlink:href="#i-list"/><use href="#i-chart" xlink:href="#i-chart"/><use href="#i-server" xlink:href="#i-server"/><use href="#i-sparkle" xlink:href="#i-sparkle"/></svg>
+    <p id="jobs-loading-status" class="jobs-loading-status" role="status" aria-live="polite"></p>
+    <div class="jobs-grid" id="jobs-grid" aria-busy="false"></div>
+    <div class="empty-state hidden" id="jobs-empty">
+      <svg class="ic"><use href="#i-search" xlink:href="#i-search"/></svg>
+      <h3>لا توجد وظائف مطابقة</h3>
+      <p class="mb-0">غيّر البحث أو صفّر الفلاتر لعرض الوظائف المتاحة.</p>
+    </div>
+    <!-- عرض تدريجي: أول 10 وظائف فقط، ثم «عرض المزيد» يُظهر الباقي و«عرض أقل» يُعيدها.
+         يُخفى تلقائياً حين لا تتجاوز النتائج 10 أو أثناء التحميل/فشل الاتصال.
+         شريط التقدّم وعدّاد «+N» وحركة الظهور كلها زخارف بصرية: النص الحقيقي
+         للحالة في #jobs-more-note (aria-live) وخصائص aria على الزر. -->
+    <div class="jobs-more-wrap" id="jobs-more-wrap" hidden>
+      <p class="jobs-more-note" id="jobs-more-note" aria-live="polite"></p>
+      <div class="jobs-more-meter" aria-hidden="true"><span class="jobs-more-meter-fill"></span></div>
+      <button type="button" class="btn jobs-more-btn" id="jobs-more" aria-expanded="false" aria-controls="jobs-grid">
+        <span class="jobs-more-ic" aria-hidden="true"><svg class="ic"><use href="#i-plus" xlink:href="#i-plus"/></svg></span>
+        <span class="jobs-more-label">عرض المزيد</span>
+        <b class="jobs-more-count" dir="ltr" aria-hidden="true"></b>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== المفضلة ============================== -->
+<section class="section app-section app-only" id="favorites" data-page="favorites" style="padding-top:6px">
+  <div class="container">
+    <div class="jobs-head">
+      <h2><svg class="ic"><use href="#i-heart" xlink:href="#i-heart"/></svg> المفضلة</h2>
+      <button type="button" class="jobs-all fav-clear" id="fav-clear" hidden>مسح الكل</button>
+    </div>
+    <p class="jobs-sub">الوظائف التي حفظتها بضغطة القلب — محفوظة على جهازك فقط، وتظهر هنا مباشرة.</p>
+    <div class="jobs-grid" id="fav-grid"></div>
+    <div class="fav-empty" id="fav-empty">
+      <svg class="ic"><use href="#i-heart" xlink:href="#i-heart"/></svg>
+      <h3>لا توجد وظائف في المفضلة بعد</h3>
+      <p>اضغط أيقونة القلب على أي وظيفة تعجبك وستجدها هنا.</p>
+      <a class="btn btn-gold btn-sm" href="#jobs">تصفّح الوظائف</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== بطاقتي — إدخال الرقم أو المسح ثم التفاصيل ============================== -->
+<section class="section app-section card-page" id="card" data-page="card" hidden>
+  <div class="container">
+    <!-- (١) شاشة الإدخال -->
+    <div class="cp-entry" id="cp-entry">
+      <div class="cp-entry-card">
+        <span class="cp-ic"><svg class="ic"><use href="#i-card" xlink:href="#i-card"/></svg></span>
+        <h2>ادخل رقم بطاقتك</h2>
+        <p>اكتب رقم البطاقة المطبوع عليها، أو امسح الباركود بكاميرا هاتفك — وتظهر لك حالتها وفرصها كاملة.</p>
+        <form class="cp-form" id="cp-form" autocomplete="off">
+          <label class="cp-label" for="cp-serial">رقم البطاقة (الباركود)</label>
+          <div class="cp-field">
+            <svg class="ic"><use href="#i-card" xlink:href="#i-card"/></svg>
+            <input id="cp-serial" type="text" inputmode="text" spellcheck="false" dir="ltr"
+                   placeholder="مثال: K7M2XQ9T4R" maxlength="18" aria-describedby="cp-err">
+          </div>
+          <div class="cp-actions">
+            <button type="submit" class="btn btn-gold btn-lg" id="cp-go">
+              <svg class="ic"><use href="#i-search" xlink:href="#i-search"/></svg> اعرض بطاقتي
+            </button>
+            <button type="button" class="btn btn-outline btn-lg" id="cp-scan">
+              <svg class="ic"><use href="#i-scan" xlink:href="#i-scan"/></svg> مسح الباركود
+            </button>
+          </div>
+          <p class="cp-err" id="cp-err" role="alert"></p>
+        </form>
+        <p class="cp-note"><svg class="ic"><use href="#i-lock" xlink:href="#i-lock"/></svg>
+          رقم البطاقة يتيح عرض تفاصيل التقديم وطباعة الاستمارة، فاحتفظ به ولا تشاركه مع الآخرين.</p>
+      </div>
+    </div>
+
+    <!-- (٢) شاشة التفاصيل (تُرسم بعد البحث) -->
+    <div class="cp-result" id="cp-result" hidden></div>
+  </div>
+</section>
+
+<!-- ============================== أرقام سريعة (نمط التطبيق) ============================== -->
+<section class="section app-section" data-page="home" style="padding-top:26px;padding-bottom:0">
+  <div class="container">
+    <!-- الأرقام تُرسم من الكود نفسه (renderHeroStats) بأصناف شريط التطبيق -->
+    <div class="app-stats" id="hero-stats"></div>
+  </div>
+</section>
+
+<!-- ============================== كيف نعمل ============================== -->
+<section class="section" id="how" data-page="home">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">آلية العمل</span>
+      <h2>خمس خطوات منظّمة من التواصل إلى التوظيف</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal" data-d="0">
+        <div class="num">1</div>
+        <h3>شراء البطاقة</h3>
+        <p>اشترِ بطاقة التوظيف <b>الدفع كاش</b> من نقطة بيع معتمدة، وعبّئ بياناتك.</p>
+      </div>
+      <div class="step reveal" data-d="120">
+        <div class="num">2</div>
+        <h3>التقديم على الوظيفة</h3>
+        <p>اختر وظيفة بإحدى فرص بطاقتك، من الموقع أو عند نقطة البيع.</p>
+      </div>
+      <div class="step reveal" data-d="240">
+        <div class="num">3</div>
+        <h3>حجز 24 ساعة</h3>
+        <p>الحجز <b>24 ساعة</b>؛ بعدها تصبح الوظيفة <b>حرجة</b> والشركة تقرر: توظيف أو إرجاع أو حذف.</p>
+      </div>
+      <div class="step reveal" data-d="360">
+        <div class="num">4</div>
+        <h3>الفرص المتبقية</h3>
+        <p>استخدم أي فرصة متبقية على وظيفة أخرى ضمن صلاحية البطاقة.</p>
+      </div>
+      <div class="step reveal" data-d="480">
+        <div class="num">5</div>
+        <h3>تثبيت النتيجة</h3>
+        <p>تُثبّت الشركة نتيجة المقابلة؛ الفرصة المستهلكة لا تعود.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== الخدمات ============================== -->
+<section class="section section-alt" id="services" data-page="home">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">خدماتنا</span>
+      <h2>توفير الأيادي العاملة الفنية والتخصصية</h2>
+    </div>
+    <div class="grid grid-3">
+      <div class="service reveal" data-d="0">
+        <svg class="ic"><use href="#i-users" xlink:href="#i-users"/></svg>
+        <h3>توفير العمالة الفنية</h3>
+        <p>عمال إنتاج، مخازن، سائقون، فنيون، عمال خدمات — وفق احتياج كل منشأة وعدد الشواغر.</p>
+      </div>
+      <div class="service reveal" data-d="90">
+        <svg class="ic"><use href="#i-building" xlink:href="#i-building"/></svg>
+        <h3>الكوادر التخصصية</h3>
+        <p>مهندسون، ممرضون، إداريون، محاسبون — بعد التحقق من الشهادات والخبرة العملية.</p>
+      </div>
+      <div class="service reveal" data-d="180">
+        <svg class="ic"><use href="#i-shield" xlink:href="#i-shield"/></svg>
+        <h3>بطاقة توظيف بباركود QR</h3>
+        <p>تابع فرص بطاقتك وحالتها وأعد طباعتها من «بطاقتي».</p>
+      </div>
+      <div class="service reveal" data-d="270">
+        <svg class="ic"><use href="#i-hourglass" xlink:href="#i-hourglass"/></svg>
+        <h3>حجز مؤقت عادل</h3>
+        <p>الوظيفة تُحجز لمرشح واحد فقط لمدة 24 ساعة — بلا تكرار ولا وعود مزدوجة.</p>
+      </div>
+      <div class="service reveal" data-d="360">
+        <svg class="ic"><use href="#i-lock" xlink:href="#i-lock"/></svg>
+        <h3>حفظ الخصوصية</h3>
+        <p>جميع البيانات والمعلومات الشخصية آمنة ولا تُشارك للعامة.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== عن الشركة والتوظيف ============================== -->
+<section class="section section-about" id="about" data-page="home">
+  <div class="container">
+    <div class="lion-grid">
+      <div class="lion-frame reveal" data-d="0">
+        <img src="assets/img/recruitment-team.webp" alt="صورة تعبيرية لفريق يناقش فرص التوظيف" loading="lazy" decoding="async">
+        <div class="cap">
+          <b>نربط الكفاءات بفرص العمل</b>
+        </div>
+      </div>
+      <div class="about-copy">
+        <span class="eyebrow eyebrow-line reveal" data-d="120">عن المنصة</span>
+        <h2 class="reveal" data-d="180">منصة مكسب للتوظيف</h2>
+        <h3 class="about-subtitle reveal" data-d="220">حلول التوظيف الشاملة</h3>
+        <p class="about-lede reveal" data-d="240">نربط بين أصحاب العمل والباحثين عن وظائف في كافة المجالات والقطاعات على مستوى العراق.</p>
+        <ul class="feature-list">
+          <li class="reveal" data-d="300"><svg class="ic"><use href="#i-check" xlink:href="#i-check"/></svg><span><b>بطاقة صالحة 30 يوماً</b> للمتابعة والتقديم على الوظائف.</span></li>
+          <li class="reveal" data-d="360"><svg class="ic"><use href="#i-check" xlink:href="#i-check"/></svg><span><b>كود مصغّر لكل وظيفة</b> يسهّل البحث والمتابعة.</span></li>
+          <li class="reveal" data-d="420"><svg class="ic"><use href="#i-check" xlink:href="#i-check"/></svg><span><b>قرار الشركة بعد 24 ساعة</b> حين لا تُثبَّت نتيجة المقابلة: توظيف أو إرجاع أو حذف — لا احتكار للفرص.</span></li>
+        </ul>
+        <div class="flex flex-wrap mt-3 reveal" data-d="620">
+          <a href="#jobs" class="btn btn-lapis"><svg class="ic"><use href="#i-briefcase" xlink:href="#i-briefcase"/></svg> الفرص المتاحة</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== الحجز والتحقق ============================== -->
+<section class="section section-alt" id="verify" data-page="home">
+  <div class="container">
+    <div class="split-2">
+      <div>
+        <span class="eyebrow eyebrow-line">بطاقة التوظيف والتحقق</span>
+        <h2>قدّم ببطاقة التوظيف — والتحقق خاص بموظفينا</h2>
+        <p class="muted">تُشترى البطاقة كاشاً من نقاط البيع المعتمدة. تابعها بباركودها واطبع استمارتك عند التقديم.</p>
+        <div class="grid grid-2" style="gap:12px">
+          <div class="contact-card" style="text-align:right">
+            <div class="ic"><svg class="ic"><use href="#i-calendar" xlink:href="#i-calendar"/></svg></div>
+            <h3>بطاقة التوظيف</h3>
+            <p>افتح <b>«بطاقتي»</b> بالباركود لمتابعة فرصك والتقديم وإعادة طباعة <b>استمارة التوظيف A4</b>.</p>
+          </div>
+          <div class="contact-card" style="text-align:right">
+            <div class="ic"><svg class="ic"><use href="#i-shield" xlink:href="#i-shield"/></svg></div>
+            <h3>متابعة التقديم</h3>
+            <p>تابع حالة فرصك وتواصل مع الشركة للاستفسار عن طلبك ونتيجة المقابلة.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap mt-3" style="gap:10px">
+          <button type="button" class="btn btn-gold" data-action="open-booking">
+            <svg class="ic"><use href="#i-card" xlink:href="#i-card"/></svg> افتح بطاقتي الآن
+          </button>
+          <a class="btn btn-outline" href="https://wa.me/9647763999907" target="_blank" rel="noopener">
+            <svg class="ic"><use href="#i-whatsapp" xlink:href="#i-whatsapp"/></svg> أو اتصل بنا واتساب
+          </a>
+        </div>
+      </div>
+      <div class="lion-frame" style="background:#0b1a3a">
+        <img src="assets/img/recruitment-digital.webp" alt="صورة تعبيرية لمتابعة طلب توظيف عبر الهاتف" loading="lazy" decoding="async">
+        <div class="cap">
+          <b>تابع طلبك بسهولة</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== شريط الاقتباس ============================== -->
+<section class="quote-band" data-page="home">
+  <div class="container">
+    <blockquote>
+      «خدمات الشركة تنحصر في توفير الأيادي العاملة من الناحية الفنية والتخصصية فقط وليس الأمنية.»
+    </blockquote>
+    <p class="attribution">— سياسة العمل الرسمية لمنصة مكسب للتوظيف</p>
+  </div>
+</section>
+
+<!-- ============================== التواصل ============================== -->
+<section class="section" id="contact" data-page="contact">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">تواصل معنا</span>
+      <h2>نحن هنا لأجلك</h2>
+      <p>للاستفسار وطلب الكوادر، تواصل معنا.</p>
+    </div>
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="ic"><svg class="ic"><use href="#i-whatsapp" xlink:href="#i-whatsapp"/></svg></div>
+        <h3>أرقام الواتساب</h3>
+        <p class="contact-inline"><a href="https://wa.me/9647763999907" target="_blank" rel="noopener" dir="ltr" class="mono">07763999907</a><a href="https://wa.me/9647863999907" target="_blank" rel="noopener" dir="ltr" class="mono">07863999907</a></p>
+      </div>
+      <div class="contact-card">
+        <div class="ic"><svg class="ic"><use href="#i-briefcase" xlink:href="#i-briefcase"/></svg></div>
+        <h3>العنوان</h3>
+        <p>لا تحُدّنا جغرافيا.. متواجدون حيثما وُجدت الفرصة وطموح السعي.</p>
+      </div>
+      <div class="contact-card">
+        <div class="ic"><svg class="ic"><use href="#i-clock" xlink:href="#i-clock"/></svg></div>
+        <h3>أوقات العمل</h3>
+        <p>يومياً من 8:00 صباحاً حتى 10:00 مساءً</p>
+        <p>فريقنا متواجد طيلة أيام الأسبوع لمتابعة الطلبات والإجابة على استفساراتكم.</p>
+      </div>
+    </div>
+
+    <div class="panel mt-3" style="background:linear-gradient(135deg,#0b1a3a,#17376c);border:none;color:#fff">
+      <div class="panel-body flex-between flex-wrap" style="gap:18px">
+        <div>
+          <h3 style="color:#fff;display:flex;align-items:center;gap:9px">
+            <svg class="ic" style="color:#e8d089"><use href="#i-sparkle" xlink:href="#i-sparkle"/></svg>
+            جاهز للبدء؟ احصل على بطاقتك الآن
+          </h3>
+          <p class="mb-0" style="color:#c3cee5">احصل على بطاقة التوظيف من أقرب نقطة بيع مباشر، وابدأ بالتقديم ومتابعة طلباتك فوراً عبر المنصة.</p>
+        </div>
+        <div class="flex flex-wrap" style="gap:10px">
+          <button type="button" class="btn btn-gold btn-lg" data-action="open-booking">
+            <svg class="ic"><use href="#i-card" xlink:href="#i-card"/></svg> بطاقتي
+          </button>
+          <a class="btn btn-ghost btn-lg" href="https://wa.me/9647763999907" target="_blank" rel="noopener">
+            <svg class="ic"><use href="#i-whatsapp" xlink:href="#i-whatsapp"/></svg> اتصل بنا واتساب
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== شريط التطبيق السفلي (جوال) ============================== -->
+<nav class="tabbar" aria-label="تنقل سريع">
+  <button type="button" class="tab-item" data-page-tab="jobs">
+    <svg class="ic"><use href="#i-briefcase" xlink:href="#i-briefcase"/></svg><span>الوظائف</span>
+  </button>
+  <button type="button" class="tab-item" data-page-tab="favorites">
+    <span class="tab-ic"><svg class="ic"><use href="#i-heart" xlink:href="#i-heart"/></svg>
+      <b class="tab-badge" id="fav-count" hidden>0</b></span><span>المفضلة</span>
+  </button>
+  <button type="button" class="tab-center" data-page-tab="home">
+    <span class="tab-fab"><svg class="ic"><use href="#i-house" xlink:href="#i-house"/></svg></span>
+    <span>الرئيسية</span>
+  </button>
+  <button type="button" class="tab-item" data-page-tab="card">
+    <svg class="ic"><use href="#i-card" xlink:href="#i-card"/></svg><span>بطاقتي</span>
+  </button>
+  <button type="button" class="tab-item" data-page-tab="contact">
+    <svg class="ic"><use href="#i-phone" xlink:href="#i-phone"/></svg><span>تواصل</span>
+  </button>
+</nav>

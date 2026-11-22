@@ -1,0 +1,374 @@
+#!/usr/bin/env node
+/* ===========================================================================
+ *  HRC — سكربت البناء
+ *  ---------------------------------------------------------------------------
+ *  يُنتج من مجلد src/partials :
+ *   1) index.html          — الموقع العام
+ *   2) verify.html         — صفحة التحقق (تُفتح عبر الكيو آر كود)
+ *   3) dashboard.html      — المنظومة الداخلية للموظفين
+ *   4) hrc-standalone.html — ملف واحد مستقل تماماً (CSS + JS + صور + خطوط مدمجة)
+ *   5) hrc-light.html      — نفس الملف لكن بصور مصغّرة (للعرض السريع والمشاركة)
+ *
+ *  التشغيل:  node tools/build.mjs            (النسخة الكاملة)
+ *            node tools/build.mjs --light    (نسخة خفيفة hrc-light.html)
+ * =========================================================================== */
+import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { join, dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const P = (p) => join(ROOT, p);
+const read = (p) => readFileSync(P(p), 'utf8');
+const kb = (n) => (n / 1024).toFixed(1) + ' KB';
+const warnings = [];
+
+/* النسخة الخفيفة (--light): تُصغّر الصور المدمجة لتُعرض وتُشارك بسرعة
+   (مناسبة للواتساب/الإيميل والعارضات التي لا تحبّ الملفات الضخمة) */
+const LIGHT = process.argv.includes('--light');
+const OUT_NAME = LIGHT ? 'hrc-light.html' : 'hrc-standalone.html';
+const LIGHT_MAX = process.env.HRC_LIGHT_MAX || '860x860>';
+const LIGHT_Q = process.env.HRC_LIGHT_Q || '56';
+
+function readAsset(abs) {
+  if (!LIGHT || !/\.jpe?g$/i.test(abs)) return readFileSync(abs);
+  try {
+    return execFileSync('convert', [abs, '-resize', LIGHT_MAX, '-strip', '-interlace', 'Plane',
+      '-quality', LIGHT_Q, 'jpg:-'], { maxBuffer: 1 << 28 });
+  } catch (e) { return readFileSync(abs); }   // بلا ImageMagick: نستخدم الأصل
+}
+
+/* ---------------- دمج الأصول كـ data URI ---------------- */
+const cache = new Map();
+function dataUri(relPath) {
+  if (cache.has(relPath)) return cache.get(relPath);
+  const abs = P(relPath);
+  if (!existsSync(abs)) { warnings.push('ملف غير موجود للدمج: ' + relPath); cache.set(relPath, null); return null; }
+  const buf = readAsset(abs);
+  const mime =
+    relPath.endsWith('.woff2') ? 'font/woff2' :
+    relPath.endsWith('.svg') ? 'image/svg+xml' :
+    relPath.endsWith('.png') ? 'image/png' :
+    relPath.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+  const out = { uri: `data:${mime};base64,${buf.toString('base64')}`, size: buf.length };
+  cache.set(relPath, out);
+  return out;
+}
+
+/* ---------------- قراءة الأجزاء ---------------- */
+const partials = {
+  sprite: read('src/partials/sprite.html'),
+  header: read('src/partials/header.html'),
+  footer: read('src/partials/footer.html'),
+  public: read('src/partials/public.html'),
+  verify: read('src/partials/verify.html'),
+  notfound: read('src/partials/notfound.html'),
+  dashboard: read('src/partials/dashboard.html')
+};
+const CSS = read('assets/css/style.css');
+const PUBLIC_CSS = read('assets/css/public-polish.css');
+const APP_CSS = read('assets/css/app-shell.css');
+const NOTIFICATION_CSS = read('assets/css/notifications.css');
+const BACKUP_CSS = read('assets/css/backup.css');
+const WORKSPACE_CSS = read('assets/css/workspace-layout.css');
+const CARD_CSS = read('assets/css/card-entry.css');
+/* مضيف قاعدة الشركة — يُقرأ من إعداد الاتصال نفسه كي يتبعه preconnect تلقائياً */
+const SUPABASE_HOST = (function () {
+  const cfg = read('assets/js/supabase-config.js');
+  const m = /url:\s*'([^']+)'/.exec(cfg);
+  try { return m ? new URL(m[1]).origin : ''; } catch (e) { return ''; }
+})();
+/* preconnect/dns-prefetch: يبدأ DNS وTLS للقاعدة قبل أن يطلبها JS، فيوفّر
+   رحلة كاملة (~100–300ms على شبكات العراق) من زمن أول تحميل للبيانات. */
+const SUPABASE_HINTS = SUPABASE_HOST
+  ? '<link rel="preconnect" href="' + SUPABASE_HOST + '" crossorigin>\n' +
+    '<link rel="dns-prefetch" href="' + SUPABASE_HOST + '">\n'
+  : '';
+const EDITOR_CSS = read('assets/css/image-editor.css');
+/* ---------------------------------------------------------------------------
+ *  بذرة العرض للملف المستقل
+ *  ---------------------------------------------------------------------------
+ *  assets/js/config.js يخرج إلى الإنتاج **ببذرة فارغة** عمداً (2026-09-19):
+ *  الموقع المنشور يقرأ بياناته من Supabase، وأي بيانات وهمية فيه كان يراها
+ *  الموظف على جهاز جديد فيحسبها حقيقية.
+ *
+ *  لكن hrc-standalone/hrc-light نسخة **عرض** تُنسخ على فلاش أو تُرسل بالإيميل
+ *  وتعمل بلا إنترنت وبلا قاعدة — ففارغةً تصبح بلا فائدة. لذلك نحقن بذرة العرض
+ *  هنا، وقت البناء، في هذين الملفين وحدهما. الصفحات المنشورة لا تمسّها.
+ * ------------------------------------------------------------------------- */
+const DEMO_SEED_SRC = read('tests/fixtures/demo-seed.mjs');
+const DEMO_SEED_JSON = (() => {
+  const m = DEMO_SEED_SRC.match(/export const DEMO_SEED = ([\s\S]*?);\n\n\/\* تحقن/);
+  if (!m) throw new Error('تعذّر استخراج DEMO_SEED من tests/fixtures/demo-seed.mjs');
+  // Demo images are embedded too: the exported file needs no sibling assets.
+  // Fail the build if an expected local illustration is missing.
+  return m[1].replace(/imageUrl: '([^']+)'/g, (field, path) => {
+    if (!path.startsWith('assets/img/jobs/')) throw new Error('Demo image must be local: ' + path);
+    const image = dataUri(path);
+    if (!image) throw new Error('Missing demo image: ' + path);
+    return 'imageUrl: ' + JSON.stringify(image.uri);
+  });
+})();
+
+const JS_ORDER = ['config', 'qr', 'vendor/jsqr', 'qr-scan', 'revalidate', 'store', 'ui', 'nav', 'voucher', 'booking', 'public', 'verify', 'dashboard', 'notifications', 'legacy-backup', 'card-archive'];
+
+/* ---------------------------------------------------------------------------
+ *  طبقة السحابة: تُحمَّل في الصفحات المنشورة **قبل** store.js حتى يكون الإقلاع
+ *  جاهزاً عند أول init()، ولا تُدمج في hrc-standalone/hrc-light (تلك نسخة
+ *  تُشارَك كملف واحد بلا إنترنت ولا معنى لسوبابيس فيها — فتشتغل محلياً بلا
+ *  أي تنبيه لأن HRCSupabaseConfig لا يكون محمّلاً أصلاً).
+ *  'vendor/supabase' مسار خاص: assets/vendor/supabase.js
+ * ------------------------------------------------------------------------- */
+const CLOUD_ORDER = ['vendor/supabase', 'supabase-config', 'cloud', 'cloud-auth', 'cloud-sync', 'cloud-http'];
+/* ⚠️ الصفحات العامة تستخدم cloud-http (عميل مصغّر ~5KB) لا مكتبة سوبابيس الكاملة
+   (213KB): الزائر يقرأ الواجهة العامة ويستدعي دالتين فقط، ولا يحتاج تسجيل دخول
+   ولا اتصالاً لحظياً. قياس الحجم أظهر أن المكتبة الكاملة كانت ثلث ما ينزّله.
+   اللوحة تبقى على المكتبة الكاملة لأنها تحتاج Auth و Realtime فعلاً. */
+const SCRIPTS = {
+  /* jsqr ليس هنا عمداً: 251KB احتياطية تُطلب عند أول مسح فعلي (qr-scan.js)،
+     لا عند فتح الصفحة. القارئ الأصلي BarcodeDetector يغطي كروم/سفاري الحديثين. */
+  /* revalidate ليس هنا: الوظائف تُعدَّل من اللوحة وحدها، فتحميل وحدة
+     إعادة التحقق لكل زائر في الصفحة العامة 5KB بلا أي فائدة. */
+  public: ['config', 'supabase-config', 'cloud-http', 'qr', 'qr-scan', 'cloud', 'cloud-sync', 'store', 'ui', 'nav', 'voucher', 'booking', 'public'],
+  verify: ['config', 'supabase-config', 'cloud-http', 'qr', 'cloud', 'cloud-sync', 'store', 'ui', 'nav', 'voucher', 'verify'],
+  dashboard: ['config', 'revalidate', 'vendor/supabase', 'supabase-config', 'qr', 'cloud', 'cloud-auth', 'cloud-sync', 'store', 'ui', 'nav', 'voucher', 'dashboard', 'notifications']
+  /* portable-backup ليس هنا عمداً: 9KB تُطلب عند أول تنزيل نسخة فعلي
+     (بنفس نمط jsqr و card-archive). اللوحة على سقف ميزانيتها تماماً،
+     ولا داعي أن يحملها كل من يفتح الشاشة بلا أن ينزّل نسخة. */
+};
+
+/* مسار الأصل من الاسم: 'vendor/x' → assets/vendor/x.js وإلا assets/js/x.js */
+const scriptPath = (n) => n.startsWith('vendor/')
+  ? `assets/vendor/${n.slice(7)}.js`
+  : `assets/js/${n}.js`;
+
+/* بصمة الأصول: تُضاف كـ ?v= لروابط CSS/JS حتى لا يعلَق المتصفح بنسخة قديمة
+   بعد النشر (تتغير تلقائياً فقط عند تعديل الأصول — بلا عشوائية بين البناءات).
+   ⚠️ تشمل طبقة السحابة أيضاً: لو حسبناها من JS_ORDER وحده لما تغيّر الرقم عند
+   تعديل cloud-sync.js — فيبقى المتصفح على نسخة قديمة **بصمت**، وهو أسوأ أنواع
+   الأخطاء لأن الكود الجديد لا يصل أصلاً. */
+const ASSET_VER = process.env.HRC_ASSET_VER || createHash('sha1')
+  .update([CSS, CARD_CSS, PUBLIC_CSS, APP_CSS, NOTIFICATION_CSS, EDITOR_CSS, BACKUP_CSS, WORKSPACE_CSS, read('assets/js/recovery.js'), ...JS_ORDER.map((n) => read(scriptPath(n))),
+           ...CLOUD_ORDER.map((n) => read(scriptPath(n)))].join('\u0000'))
+  .digest('hex').slice(0, 10);
+const verQ = (p) => `${p}?v=${ASSET_VER}`;
+
+const META = {
+  title: 'منصة مكسب للتوظيف | Makseb Employment Platform',
+  desc: 'منصة مكسب للتوظيف (HRC) في الحلة — بابل: بطاقات توظيف بباركود QR وفرص مستقلة حسب البطاقة، صلاحية 30 يوماً، وحجز مؤقت للوظيفة 24 ساعة بقرار حرج.',
+  keywords: 'توظيف, بابل, الحلة, وظائف العراق, شركة توظيف, بطاقة توظيف, HRC, عمالة فنية'
+};
+
+function docHead({ title, desc, css = null, icon = 'assets/img/favicon.svg', extra = '', pwa = true }) {
+  return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
+<meta name="description" content="${desc}">
+<meta name="keywords" content="${META.keywords}">
+<meta name="theme-color" content="#0b1a3a">
+<meta name="author" content="Makseb Employment Platform">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${desc}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_IQ">
+<link rel="icon" type="image/svg+xml" href="${icon}">
+<link rel="apple-touch-icon" href="/assets/img/icon-192.png">
+${pwa ? `<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="مكسب">` : ''}
+${SUPABASE_HINTS}
+${css ? `<link rel="stylesheet" href="${verQ(css)}">` : ''}
+${extra}</head>
+<body>
+`;
+}
+
+/* ---------------- الصفحات المنفصلة ---------------- */
+function buildPage({ title, desc, body, scripts, publicStyle = false, staffStyle = false, cardStyle = false, pwa = true }) {
+  return docHead({ title, desc, css: 'assets/css/style.css', pwa: pwa,
+    extra: (publicStyle ? '<link rel="preload" href="assets/img/hero-skyline.webp" as="image" fetchpriority="high">\n' : '') +
+      (cardStyle ? `<link rel="stylesheet" href="${verQ('assets/css/card-entry.css')}">` : '') +
+      (publicStyle ? `<link rel="stylesheet" href="${verQ('assets/css/public-polish.css')}"><link rel="stylesheet" href="${verQ('assets/css/app-shell.css')}">` : '') +
+      (staffStyle ? `<link rel="stylesheet" href="${verQ('assets/css/notifications.css')}"><link rel="stylesheet" href="${verQ('assets/css/image-editor.css')}"><link rel="stylesheet" href="${verQ('assets/css/backup.css')}"><link rel="stylesheet" href="${verQ('assets/css/workspace-layout.css')}">` : '') }) +
+    partials.sprite + '\n' +
+    partials.header + '\n' +
+    body + '\n' +
+    partials.footer + '\n' +
+    scripts.map((n) => `<script src="${verQ(scriptPath(n))}"></script>`).join('\n') +
+    '\n</body>\n</html>\n';
+}
+
+writeFileSync(P('index.html'), buildPage({
+  title: META.title, desc: META.desc, body: partials.public, scripts: SCRIPTS.public,
+  publicStyle: true, cardStyle: true
+}));
+writeFileSync(P('verify.html'), buildPage({
+  title: 'التحقق من بطاقة التوظيف | منصة مكسب للتوظيف',
+  desc: 'صفحة التحقق الرسمية لبطاقات منصة مكسب للتوظيف — امسح الباركود أو أدخل الرقم التسلسلي للتحقق من صحة البطاقة وحالة الفرص.',
+  body: partials.verify, scripts: SCRIPTS.verify
+}));
+/* صفحة 404 بهوية الشركة: يقرأها Cloudflare Pages تلقائياً من /404.html عند أي
+   مسار غير موجود، ويوجّه إليها خادم المعاينة المحلي أيضاً — فيبقى الزائر داخل
+   الموقع مع روابط الأقسام بدل صفحة بيضاء من المضيف. */
+{
+  /* ⚠️ صفحة 404 تُخدَم على **عنوان المسار الأصلي** (مثال /a/b/typo) لا على
+     /404.html — فالمسارات النسبية (assets/…) تُحسب من /a/b/ وتفشل، فيرى الزائر
+     صفحة بلا أنماط ولا أيقونات. لذلك تُثبَّت مراجعها على جذر الموقع (/assets/…)
+     وهي الصفحة الوحيدة التي تحتاج ذلك. */
+  const nf = buildPage({
+    title: 'الصفحة غير موجودة | منصة مكسب للتوظيف',
+    desc: 'الرابط المطلوب غير موجود على موقع منصة مكسب للتوظيف — تصفّح الوظائف المتاحة أو تواصل معنا مباشرة.',
+    body: partials.notfound, scripts: ['config', 'ui', 'nav']
+  }).replace(/(src|href)="assets\//g, '$1="/assets/')
+    .replace(/(src|href)="index\.html/g, '$1="/index.html');
+  writeFileSync(P('404.html'), nf);
+}
+
+writeFileSync(P('dashboard.html'), buildPage({
+  title: 'المنظومة الداخلية | منصة مكسب للتوظيف',
+  desc: 'لوحة الموظفين والإدارة لمنصة مكسب للتوظيف: إدارة الوظائف، إصدار الاستمارات، متابعة الحجوزات، سجل التدقيق، واللوحة المالية.',
+  body: partials.dashboard, scripts: SCRIPTS.dashboard, staffStyle: true,
+  /* لوحة الموظفين لا تُثبَّت كتطبيق: تُفتح داخل المتصفح فقط. */
+  pwa: false
+}));
+
+/* ---------------- النسخة المستقلة (ملف واحد) ---------------- */
+function buildStandalone() {
+  const stats = { fonts: 0, cssImgs: 0, htmlImgs: 0 };
+
+  // 1) CSS مع دمج الخطوط والصور
+  let css = (CSS + '\n' + CARD_CSS + '\n' + PUBLIC_CSS + '\n' + APP_CSS + '\n' + NOTIFICATION_CSS + '\n' + EDITOR_CSS + '\n' + BACKUP_CSS + '\n' + WORKSPACE_CSS).replace(/url\(['"]?\.\.\/fonts\/([^'")]+)['"]?\)/g, (m, f) => {
+    const d = dataUri('assets/fonts/' + f); if (!d) return m;
+    stats.fonts += d.size; return `url(${d.uri})`;
+  });
+  css = css.replace(/url\(['"]?\.\.\/img\/([^'")]+)['"]?\)/g, (m, f) => {
+    const d = dataUri('assets/img/' + f); if (!d) return m;
+    stats.cssImgs += d.size; return `url(${d.uri})`;
+  });
+
+  // 2) إعادة كتابة الروابط + دمج صور <img>
+  const rewriteLinks = (html) => html
+    .replace(/href="index\.html#([^"]+)"/g, 'href="#$1"')
+    .replace(/href="index\.html"/g, 'href="#home"')
+    .replace(/href="verify\.html"/g, 'href="#!verify"')
+    .replace(/href="dashboard\.html"/g, 'href="#!dashboard"');
+
+  const prep = (html) => rewriteLinks(html).replace(/src="assets\/img\/([^"]+)"/g, (m, f) => {
+    const d = dataUri('assets/img/' + f);
+    if (!d) return m;
+    stats.htmlImgs += d.size;
+    return `src="${d.uri}"`;
+  });
+
+  const header = prep(partials.header);
+  const footer = prep(partials.footer);
+  const site = prep(partials.public);
+  const verify = prep(partials.verify);
+  const dash = prep(partials.dashboard);
+
+  // 3) حزمة JavaScript مدمجة + ضبط + راوتر
+  /* ⚠️ الروابط الموجودة داخل نصوص JS (مثل بوابة صفحة التحقق التي تبني HTML
+     بالسلاسل) يجب أن تُعاد كتابتها أيضاً، وإلا بقي في الملف المستقل رابط إلى
+     صفحة منفصلة (dashboard.html/index.html) فيسقط فحص الاكتفاء الذاتي ويخرج
+     البناء بكود 1 — وهو ما يُفشل النشر الآلي على Cloudflare Pages. */
+  const jsBundle = JS_ORDER.map((n) => `/* ===================== ${n}.js ===================== */\n` + rewriteLinks(read(scriptPath(n)))).join('\n;\n');
+  const icon = dataUri('assets/img/favicon.svg');
+
+  const boot = `
+/* ===== ضبط النسخة المستقلة ===== */
+HRC_CONFIG.verifyLocal = '#!verify';
+/* بذرة العرض: هذه نسخة تعمل بلا قاعدة بيانات، فتحتاج بيانات لتُظهر شيئاً.
+   الصفحات المنشورة تبقى ببذرة فارغة وتقرأ من Supabase. */
+HRC_CONFIG.seed = ${DEMO_SEED_JSON};
+${icon ? `(function(){var l=document.querySelector('link[rel="icon"]');if(l)l.href=${JSON.stringify(icon.uri)};})();` : ''}
+</body>`;
+  // (نُبقي وسم الإغلاق في النهاية بعد الراوتر)
+
+  const router = `
+/* ===== راوتر الملف المستقل ===== */
+(function () {
+  var VIEWS = ['site', 'verify', 'dashboard'];
+  function parse() {
+    var h = location.hash || '';
+    if (h.indexOf('#!') !== 0) return { name: 'site', query: '' };
+    var rest = h.slice(2), qi = rest.indexOf('?');
+    return { name: (qi < 0 ? rest : rest.slice(0, qi)) || 'site', query: qi < 0 ? '' : rest.slice(qi) };
+  }
+  function route() {
+    var r = parse();
+    if (VIEWS.indexOf(r.name) < 0) r.name = 'site';
+    VIEWS.forEach(function (n) {
+      var el = document.getElementById('route-' + n);
+      if (el) el.hidden = (n !== r.name);
+    });
+    document.body.setAttribute('data-route', r.name);
+    if (r.name === 'verify' && window.HRCVerify) window.HRCVerify.mount(r.query);
+    if (r.name === 'dashboard') window.scrollTo(0, 0);
+    if (r.name === 'site') {
+      var h = location.hash || '';
+      if (h && h.indexOf('#!') !== 0 && h !== '#') {
+        var t = document.getElementById(h.slice(1));
+        if (t) setTimeout(function () { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 40);
+      }
+    }
+  }
+  window.addEventListener('hashchange', route);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', route);
+  else route();
+})();`;
+
+  const html = docHead({
+    title: META.title + ' — ملف واحد',
+    desc: META.desc,
+    icon: icon ? icon.uri : '',
+    extra: `<style>\n${css}\n</style>\n`
+  }) +
+    partials.sprite + '\n' +
+    header + '\n' +
+    '<div class="route" id="route-site">\n' + site + '\n</div>\n' +
+    '<div class="route" id="route-verify" hidden>\n' + verify + '\n</div>\n' +
+    '<div class="route" id="route-dashboard" hidden>\n' + dash + '\n</div>\n' +
+    footer + '\n' +
+    '<script>\n' + jsBundle + '\n</script>\n' +
+    '<script>\n' + boot.replace(/\n<\/body>$/, '') + '\n' + router + '\n</script>\n' +
+    '</body>\n</html>\n';
+
+  writeFileSync(P(OUT_NAME), html);
+  return { size: Buffer.byteLength(html), ...stats };
+}
+
+const st = buildStandalone();
+
+/* ---------------- التقرير ---------------- */
+console.log('— تم البناء —  (بصمة الأصول: ' + ASSET_VER + ')');
+[['index.html'], ['verify.html'], ['dashboard.html'], ['404.html'], [OUT_NAME]].forEach(([n]) => {
+  console.log('  ' + n.padEnd(22) + kb(statSync(P(n)).size));
+});
+console.log('  (المستقل: خطوط ' + kb(st.fonts) + ' + صور CSS ' + kb(st.cssImgs) + ' + صور HTML ' + kb(st.htmlImgs) + ')' +
+  (LIGHT ? '   — نسخة خفيفة للعرض والمشاركة' : ''));
+
+if (warnings.length) { console.log('— تحذيرات —'); [...new Set(warnings)].forEach((w) => console.log('  ⚠ ' + w)); }
+else console.log('  ✓ كل الملفات المرجعية موجودة');
+
+/* ---------------- فحص الاكتفاء الذاتي ---------------- */
+const out = read(OUT_NAME);
+const bad = [];
+const patterns = [
+  ['رابط CSS خارجي', /<link[^>]+href="assets\/css/],
+  ['رابط JS خارجي', /<script[^>]+src="assets\/js/],
+  ['خط خارجي', /url\(['"]?\.\.\/fonts/],
+  ['صورة CSS خارجية', /url\(['"]?\.\.\/img/],
+  ['صورة HTML خارجية', /<img[^>]+src="assets\/img/],
+  ['رابط موضعي مفقود (href="")', /href=""\s*>/],
+  ['رابط صفحة منفصلة', /href="(index|verify|dashboard)\.html/],
+  ['أيقونة خارجية', /<link[^>]+rel="icon"[^>]+href="assets\//]
+];
+patterns.forEach(([label, re]) => { if (re.test(out)) bad.push(label); });
+if (bad.length) { console.log('  ⚠ الملف المستقل غير مكتفٍ بذاته: ' + bad.join(' | ')); process.exitCode = 1; }
+else console.log('  ✓ الملف المستقل مكتفٍ بذاته تماماً (يعمل بدون إنترنت وبدون مجلدات مساعدة)');
+if (LIGHT) console.log('  ✓ نسخة خفيفة: ' + OUT_NAME + ' — ' + kb(statSync(P(OUT_NAME)).size));

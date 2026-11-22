@@ -1,0 +1,44 @@
+node_modules/
+*.log
+.DS_Store
+# مخرجات مؤقتة للاختبارات
+tests/.tmp/
+
+# مجلد النشر المُجمَّع (يُبنى بـ npm run dist)
+dist/
+
+# معاينة الاستمارة المطبوعة (تُولَّد محلياً من tests/apply-flow.mjs — أداة تطوير)
+form-preview.html
+__pycache__/
+# Company laptop secrets, encrypted working state and recovery output.
+.office/
+office/runtime/
+*.hrcdb
+*.pfx
+*.key.pem
+*.private.pem
+*.pgpass
+state.key
+state.enc
+
+# مخرجات تقسيم SQL — تُولَّد بـnpm run sql:split، والمصدر docs/schema.sql
+out-sql/
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  حزمة الإنقاذ — تُبنى محلياً من الأدوات و`git archive`، ولا تُدفع للمستودع.
+#
+#  ⚠️ لماذا؟ لأنها تحتوي:
+#    • نسخة كاملة من الكود (53 م.ب) — مكرّرة، والمستودع هو المصدر
+#    • متى وصل ملف البيانات: بيانات شخصية لأصحاب البطاقات (أسماء، هواتف،
+#      عناوين) وكلمات مرور مشفّرة. لا مكان لها في مستودع.
+#
+#  لإعادة بنائها: انظر rescue/BUILD.md
+# ═══════════════════════════════════════════════════════════════════════════
+/rescue/
+
+# حزم الطوارئ المشفّرة والمفاتيح — لا تدخل Git أبداً (بيانات شخصية وأسرار)
+*.hrcbak
+*.enc
+brc_secret*
+*.pw
+/storage/job-images/
