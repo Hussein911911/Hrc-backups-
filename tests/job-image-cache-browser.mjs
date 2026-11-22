@@ -14,7 +14,7 @@ const counts=new Map();
 const remote=createServer((req,res)=>{counts.set(req.url,(counts.get(req.url)||0)+1);res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Content-Type','image/png');res.setHeader('Cache-Control',req.url.includes('no-store')?'no-store':'public, max-age=60');res.end(png)});
 await new Promise(r=>remote.listen(0,'127.0.0.1',r));
 const other=`http://127.0.0.1:${remote.address().port}`;
-const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8').replace('https://tkxbmopxcftxpcoczweq.supabase.co',other);
+const sw=readFileSync(new URL('../sw.js',import.meta.url),'utf8').replace('https://vqsvztudvfukyuerzcgx.supabase.co',other);
 /* اسم الكاش يُقرأ من sw.js نفسه، فرفع جيله لا يكسر هذا الفحص */
 const CACHE=(sw.match(/const CACHE_NAME = '([^']+)'/)||[])[1];
 const server=createServer((req,res)=>{

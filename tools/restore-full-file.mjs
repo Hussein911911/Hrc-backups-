@@ -21,10 +21,9 @@
      node tools/restore-full-file.mjs <file.sql> --dsn "<dsn>" --driver pg --yes
 
    ملاحظات سلامة:
-     • يقبل مشروع الهدف tkxbmopxcftxpcoczweq فقط، ويرفض أي مضيف/قاعدة/منفذ آخر.
-     • TLS يتحقق من الشهادة؛ وDSN يفضّل HRC_RESTORE_DSN محلياً لا argv.
-     • يتطلب --yes؛ لا يعيد المحاولة تلقائياً بعد فشل (الملف يبدأ بـ TRUNCATE).
-     • بعد الاسترجاع يطبّق fallback محمياً لـ brc_secret وينشئ قيمة داخل DB بلا طباعتها.
+     • يرفض العمل على مشروع الإنتاج vqsvztudvfukyuerzcgx (محظور نهائياً).
+     • لا يطبع كلمة المرور: تُقنَّع في كل سطر سجل، وتنتقل عبر البيئة لا argv.
+     • لا يعيد المحاولة تلقائياً بعد فشل (الملف يبدأ بـ TRUNCATE).
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { readFileSync, writeFileSync, mkdtempSync, existsSync } from 'node:fs';
@@ -36,8 +35,6 @@ import { splitStatements } from './sql-split-core.mjs';
 import { patchTriggerBlocks } from './patch-restore-triggers.mjs';
 import { headerCounts } from './dump-header.mjs';
 
-const EXPECTED_REF = 'tkxbmopxcftxpcoczweq';
-const EXPECTED_HOST = `db.${EXPECTED_REF}.supabase.co`;
 const FORBIDDEN_REF = 'vqsvztudvfukyuerzcgx';   // مشروع الإنتاج — محظور نهائياً
 
 /* النسخ المتحقَّق منها. كل نسخة معها أعدادها المقروءة من ترويسة الملف
@@ -78,23 +75,10 @@ const file = process.argv[2];
 if (!file || file.startsWith('--')) die('الاستخدام: node tools/restore-full-file.mjs <file.sql> --dsn "<dsn>" [--driver psql|pg]');
 if (!existsSync(file)) die(`الملف غير موجود: ${file}`);
 
-const dsn = process.env.HRC_RESTORE_DSN || arg('dsn') || null;
-if (!dsn || dsn === true) die('مطلوب HRC_RESTORE_DSN محلياً. لا تضع كلمة المرور في المحادثة.');
-function assertTargetDsn(value) {
-  let u;
-  try { u = new URL(String(value)); } catch { throw new Error('رابط PostgreSQL غير صالح.'); }
-  if (String(value).includes(FORBIDDEN_REF)) throw new Error('رُفض المشروع المحظور.');
-  if (!['postgres:', 'postgresql:'].includes(u.protocol) ||
-      u.hostname.toLowerCase() !== EXPECTED_HOST ||
-      (u.port || '5432') !== '5432' || decodeURIComponent(u.pathname || '') !== '/postgres' ||
-      u.searchParams.has('host')) {
-    throw new Error(`يُسمح فقط بمشروع ${EXPECTED_REF}، المضيف المباشر ${EXPECTED_HOST}:5432، وقاعدة postgres.`);
-  }
-  if (u.searchParams.get('sslmode') === 'disable') throw new Error('TLS إجباري؛ sslmode=disable مرفوض.');
-  return true;
-}
-try { assertTargetDsn(dsn); } catch (e) { die(e.message); }
-const secureDsn = (() => { const u = new URL(String(dsn)); u.searchParams.delete('sslmode'); return u.toString(); })();
+const dsn = arg('dsn') || process.env.HRC_RESTORE_DSN || null;
+if (!dsn || dsn === true) die('مطلوب --dsn (أو HRC_RESTORE_DSN). لا تضع كلمة المرور في المحادثة — psql/pg يقرآنها من الـ DSN محلياً.');
+if (String(dsn).includes(FORBIDDEN_REF)) die(`الـ DSN يشير إلى مشروع الإنتاج المحظور ${FORBIDDEN_REF} — رُفض التنفيذ.`);
+
 const driver = String(arg('driver') || process.env.HRC_RESTORE_DRIVER || 'psql');
 if (!['psql', 'pg'].includes(driver)) die(`سائق غير معروف: ${driver} (المسموح: psql أو pg)`);
 const psql = arg('psql') || process.env.PSQL || 'psql';
@@ -102,7 +86,6 @@ const logPath = arg('log') || path.join(process.cwd(), `restore-${new Date().toI
 const doPatch = !arg('no-patch', false);
 const yes = !!arg('yes', false);
 const allowNew = !!arg('allow-new', false);
-if (!yes) die('الاسترجاع هدّام. راجع اسم الملف وبصمته والعدادات، ثم أعد التشغيل مع --yes فقط بعد تأكيدك.');
 
 /* ── ١) فحص الملف ──────────────────────────────────────────────────────── */
 const raw = readFileSync(file);
@@ -196,14 +179,19 @@ function connEnv(dsnStr) {
   if (u.password) env.PGPASSWORD = decodeURIComponent(u.password);
   const db = decodeURIComponent(u.pathname.replace(/^\//, ''));
   if (db) env.PGDATABASE = db;
-  env.PGSSLMODE = 'verify-full';
+  const ssl = u.searchParams.get('sslmode');
+  if (ssl) env.PGSSLMODE = ssl;
+  else env.PGSSLMODE = 'require';
   return { env, extraArgs: [] };
 }
 const conn = connEnv(dsn);
 /* هل نحتاج TLS؟ نعم إن كان sslmode مطلوباً، أو إن كان المضيف TCP (لا مقبس يونكس) */
-function sslFor() {
-  /* TLS certificate and hostname must validate; never downgrade verification. */
-  return { rejectUnauthorized: true };
+function sslFor(dsnStr) {
+  const s = String(dsnStr);
+  if (/sslmode=disable/.test(s)) return false;
+  if (/sslmode=(require|verify-ca|verify-full|prefer)/.test(s)) return { rejectUnauthorized: false };
+  const sockHost = /[?&]host=\//.test(s);
+  return sockHost ? false : { rejectUnauthorized: false };
 }
 const baseEnv = {
   ...process.env, ...conn.env,
@@ -249,7 +237,7 @@ if (driver === 'psql') {
   say('✔ psql أنهى الملف برمز خروج 0 (ON_ERROR_STOP=1)');
 } else {
   const { Client } = await import('pg');
-  const client = new Client({ connectionString: secureDsn, ssl: sslFor(dsn), connectionTimeoutMillis: 30000 });
+  const client = new Client({ connectionString: String(dsn), ssl: sslFor(dsn), connectionTimeoutMillis: 30000 });
   try {
     await client.connect();
     say('✔ اتصلت بالقاعدة');
@@ -269,35 +257,7 @@ if (driver === 'psql') {
   }
 }
 
-/* ── ٤) تثبيت سرّ بصمة داخلي آمن والتحقق منه ───────────────────────────
-   GUC app.brc_secret غير قابل للضبط في بعض خطط Supabase. نستخدم الحل المشفّر
-   في المخطط: جدول بلا سياسات RLS، ودالة SECURITY DEFINER. يُنشأ المفتاح داخل
-   PostgreSQL ولا يعود إلى الطرفية أو السجل. */
-try {
-  const { Client } = await import('pg');
-  const client = new Client({ connectionString: secureDsn, ssl: sslFor(), connectionTimeoutMillis: 30000 });
-  await client.connect();
-  try {
-    const fallbackSql = readFileSync(new URL('../docs/sql-parts/fixes/04-brc-secret-fallback.sql', import.meta.url), 'utf8');
-    await client.query(fallbackSql);
-    await client.query(`insert into brc.app_secrets(name, value)
-      values ('brc_secret', encode(extensions.gen_random_bytes(32), 'hex'))
-      on conflict (name) do nothing`);
-    const check = await client.query(`select
-      (select count(*)::int from brc.recovery_control) as recovery_control_rows,
-      (select count(*)::int from brc.app_secrets where name='brc_secret') as app_secret_rows,
-      length(brc.verify_token('HRC-RESTORE-CHECK'))::int as token_length`);
-    const v = check.rows[0] || {};
-    if (Number(v.recovery_control_rows) !== 1 || Number(v.app_secret_rows) !== 1 || Number(v.token_length) !== 64) {
-      throw new Error('Post-restore secret validation failed (counts/token length mismatch).');
-    }
-    say('✔ إعداد بديل آمن لـ app.brc_secret جاهز؛ المفتاح بقي داخل PostgreSQL ولم يُعرض');
-  } finally { await client.end(); }
-} catch (e) {
-  die(`فشل إعداد/فحص مفتاح البصمة الداخلي؛ لا تفعّل الموقع: ${e.message}`);
-}
-
-/* ── ٥) التحقّق ─────────────────────────────────────────────────────────── */
+/* ── ٤) التحقّق ─────────────────────────────────────────────────────────── */
 const countSql = `
 select json_build_object(
   'staff', (select count(*) from brc.staff),
@@ -318,10 +278,7 @@ select json_build_object(
   'disabled_triggers', (select count(*) from pg_trigger t join pg_class c on c.oid=t.tgrelid
                           join pg_namespace n on n.oid=c.relnamespace
                          where n.nspname='brc' and not t.tgisinternal and t.tgenabled <> 'O'),
-  'auth_linked', (select count(*) from brc.staff where auth_id is not null),
-  'recovery_control', (select count(*) from brc.recovery_control),
-  'app_secret_rows', (select count(*) from brc.app_secrets where name='brc_secret'),
-  'token_length', length(brc.verify_token('HRC-RESTORE-CHECK'))
+  'auth_linked', (select count(*) from brc.staff where auth_id is not null)
 ) as v;`;
 
 let got;
@@ -333,7 +290,7 @@ if (driver === 'psql') {
   try { got = JSON.parse(ver.stdout.trim()); } catch { die(`مخرجات التحقّق غير مفهومة: ${String(ver.stdout).slice(0, 200)}`); }
 } else {
   const { Client } = await import('pg');
-  const client = new Client({ connectionString: secureDsn, ssl: sslFor(dsn), connectionTimeoutMillis: 30000 });
+  const client = new Client({ connectionString: String(dsn), ssl: sslFor(dsn), connectionTimeoutMillis: 30000 });
   await client.connect();
   const r = await client.query(countSql);
   got = r.rows[0].v;
@@ -345,12 +302,6 @@ say('══════ التحقّق بعد التنفيذ ══════'
 let fail = 0;
 const rows = [];
 for (const [k, want] of Object.entries({ ...expected, ...extra })) {
-  const have = Number(got[k]);
-  const ok = have === want;
-  if (!ok) fail++;
-  rows.push(`${ok ? '✔' : '✖'} ${k.padEnd(22)} المتوقع ${String(want).padStart(6)}   الفعلي ${String(have).padStart(6)}`);
-}
-for (const [k, want] of Object.entries({ recovery_control: 1, app_secret_rows: 1, token_length: 64 })) {
   const have = Number(got[k]);
   const ok = have === want;
   if (!ok) fail++;

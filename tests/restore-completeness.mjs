@@ -38,7 +38,7 @@ const check = (label, got, want) => {
 };
 
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-const SB_URL = 'https://tkxbmopxcftxpcoczweq.supabase.co/storage/v1/object/public/job-images/jobs/hrc-1046.jpg';
+const SB_URL = 'https://vqsvztudvfukyuerzcgx.supabase.co/storage/v1/object/public/job-images/jobs/hrc-1046.jpg';
 
 /* ═══ ١) الشكل الذي يُنتجه الخادم بعد الإصلاح ══════════════════════════ */
 const payload = {

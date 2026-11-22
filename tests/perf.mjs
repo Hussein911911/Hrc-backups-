@@ -202,7 +202,10 @@ step(3, 'ميزانية القاعدة — طلبات Supabase لكل زيارة
     /fetchRange\(r.from, r.to, wantCount && index === lastIndex\)/.test(cloudJs) &&
     !/fetchRange\(r.from, r.to, true\)/.test(cloudJs));
   check('preconnect إلى قاعدة الشركة في كل صفحة منشورة', (() => {
-    const host = 'tkxbmopxcftxpcoczweq.supabase.co';
+    const configSource = readFileSync(join(ROOT, 'assets/js/supabase-config.js'), 'utf8');
+    const projectUrl = configSource.match(/url:\s*['"]([^'"]+)['"]/)?.[1];
+    if (!projectUrl) return false;
+    const host = new URL(projectUrl).host;
     return ['index.html', 'verify.html', 'dashboard.html', '404.html'].every((f) => {
       const html = readFileSync(join(ROOT, f), 'utf8');
       return new RegExp('rel="preconnect" href="https://' + host + '"').test(html) &&

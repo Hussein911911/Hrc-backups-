@@ -1324,7 +1324,12 @@ check('العودة إلى الموقع العام تعمل', () => {
  * أو «لا توجد وظائف معروضة حالياً»، أو «تعذّر الاتصال بقاعدة الشركة». */
 console.log('\n=== 7) الموقع العام في وضع قاعدة الشركة (Supabase مفعّل) ===');
 {
-  const REST = 'https://tkxbmopxcftxpcoczweq.supabase.co/rest/v1/';
+  // Keep the mock endpoint aligned with the active public Supabase project;
+  // the project URL changes when a fresh recovery target is promoted.
+  const configSource = readFileSync(join(ROOT, 'assets/js/supabase-config.js'), 'utf8');
+  const projectUrl = configSource.match(/url:\s*['"]([^'"]+)['"]/)?.[1];
+  if (!projectUrl) throw new Error('تعذّر استخراج URL مشروع Supabase من الإعدادات');
+  const REST = new URL('/rest/v1/', projectUrl).href;
   const CLOUD_JOBS = [
     { code: 'HRC-9001', title: 'فني تشغيل من القاعدة', category: 'تقني', region: 'الحلة', shift: 'صباحي',
       salary_min: 700000, salary_max: 900000, gender: 'لا فرق', vacancies: 2, requirements: ['خبرة سنتين'],

@@ -1,61 +1,224 @@
-# دليل الاسترجاع الآمن — `RESTORE-GUIDE-AR.md`
+# دليل تشغيل الاسترجاع — نسخة 2026-11-19 على مشروع `tkxbmopxcftxpcoczweq`
 
-## الحالة الآن
+> ⚠️ **هذا دليل تاريخي لمحاولة `tkxb` السابقة، وليس إعداد المستودع الحالي.** النسخة المنسوخة الآن تستهدف `kdtatwuycidndsulbnqc`؛ راجع `docs/rescue/RESTORE-LOG-2026-11-22.md` للحالة الأحدث.
 
-وافقتَ على استبدال صف `brc.recovery_control` القديم بصف/مفتاح داخلي جديد، ووافقتَ على إنشاء قيمة جديدة لـ`app.brc_secret`. إصلاح الأداة واختبارها محلياً اكتمل، لكن لم يحدث أي حذف أو استرجاع في Supabase. المحاولة الآمنة لضبط `app.brc_secret` عبر موصل SQL رُفضت بصلاحية PostgreSQL؛ لا نعيد المحاولة بصيغ SQL أخرى.
+> **اقرأ أولاً:** `RESTORE-RESULTS-AR.md` (‏§٩) يشرح لماذا التنفيذ يحتاج
+> **أمراً واحداً من جهاز متصل بـSupabase**. كل ما تحتاجه هنا جاهز ومختبر:
+> الملف، والترقيع، والمنفّذ، والتحقّق الآلي.
+>
+> ⛔ **ممنوع تماماً** توجيه أي أمر في هذا الدليل إلى المشروع
+> `vqsvztudvfukyuerzcgx` (الإنتاج). الأداة ترفضه تلقائياً.
 
-وجّهتُ إعداد الموقع المحلي إلى مشروع HRC Backup المصرّح به، لكن أبقيت الاتصال **معطّلاً**: جداول البيانات المطلوبة لم تُستعد بعد، وجدول `card_number_registry` غير موجود حالياً، كما أن PostgREST لا يعرض مخطط `brc`. لم أغيّر القاعدة ولا Cloudflare.
+---
 
-لرؤية شكل الموقع الآن افتح بطاقة **Recruitment Site Preview** الظاهرة في Arena ثم أضف `/site` إلى المسار للصفحة العامة؛ الجذر `/` يعرض لوحة العرض. هذه معاينة محلية ببيانات وهمية وخادمها يعطّل Supabase، وليست الموقع المتصل بالقاعدة ولا نشر Cloudflare.
+## ٠) قبل البدء — ثلاث دقائق تحقّق
 
-## الخطوة 1 — `app.brc_secret` متوقف حالياً
+| # | تحقّق | كيف |
+|---|---|---|
+| ١ | الملف سليم | `SHA-256 = a1cce0475ae8158cacb523e738cd1bbe34def36dd77787a2fee25763f84ec8ba` · 3,858,946 بايت |
+| ٢ | الهدف فارغ من بيانات العمل | لوحة Supabase → SQL: `select count(*) from brc.applicants;` = 0 |
+| ٣ | عندك كلمة مرور القاعدة | Dashboard → **Connect** → **Session pooler** (‏`aws-0-eu-west-1.pooler.supabase.com:5432`). لا تكتبها في المحادثة |
 
-المفتاح مطلوب للتحقق من رموز HMAC في `brc.verify_token`. وافق المالك على قيمة جديدة، لكنه لم يولّدها أو يضعها.
+> المشروع في `eu-west-1` والاتصال المباشر `db.<ref>.supabase.co` يخرج IPv6 فقط؛
+> لذلك استخدم **Session pooler** (منفذ 5432) كما في الأمثلة.
 
-لقطة لوحة Supabase التي أرسلها المالك تؤكد أن صفحة **Database → Settings** في هذا المشروع تعرض كلمة مرور قاعدة البيانات وConnection pooling وSSL وDisk وNetwork restrictions وConnection logging؛ لا يوجد فيها حقل **Custom settings** أو إعداد `app.brc_secret`. لذلك كانت إشارة المسار السابقة غير مؤكدة/غير مطابقة للواجهة الحالية، ولا ينبغي اتباعها.
+---
 
-محاولة `ALTER DATABASE ... SET app.brc_secret` عبر موصل Supabase رُفضت بخطأ صلاحية PostgreSQL `42501`. لم نعد المحاولة بصيغة أخرى ولم نستخدم SQL Editor كطريق بديل. لا تضغط **Reset database password** ولا تغيّر pooling أو SSL؛ هذه الإعدادات لا تضبط `app.brc_secret`.
+## الطريقة أ — أمر واحد (موصى بها، بلا psql)
 
-**لا تولّد المفتاح ولا تلصقه في SQL Editor حالياً.** يلزم أولاً تأكيد مسار مدعوم للمشروع/خطته من توثيق Supabase أو دعمها. لا تنشئ خطة مدفوعة ولا تغيّر إعدادات المشروع بغرض التجربة. إذا ظهر مسار رسمي مؤكّد، ضَع القيمة محلياً فقط ولا ترسلها في المحادثة؛ المفتاح الجديد قد يجعل رموز HMAC القديمة غير قابلة للتحقق.
+على جهازك، من جذر المستودع:
 
-## الخطوة 2 — تشغيل ملف النسخة على المشروع الهدف
+```powershell
+# 1) مرة واحدة فقط: سائق قاعدة البيانات
+npm install pg --no-save
 
-بيئة الوكيل لا تحتوي `psql` ولا اتصال PostgreSQL مباشر، وموصل Supabase لا يوفّر قناة موثوقة لرفع ملف SQL كامل حجمه 3.86MB مع الحفاظ على المعاملات. لذلك يلزم تنفيذ الملف من جهازك عبر أداة المستودع المحدّثة.
+# 2) الاسترجاع + التحقّق (ضع كلمة المرور مكان PASSWORD — لا ترسلها لأحد)
+# ملف منزّل قبل 2026-11-20 (البصمة معروفة):
+node tools/restore-full-file.mjs "C:\path\to\HRC-FULL-2026-11-19.sql" `
+  --dsn "postgresql://postgres.tkxbmopxcftxpcoczweq:PASSWORD@aws-0-eu-west-1.pooler.supabase.com:5432/postgres" `
+  --driver pg --yes
+```
 
-1. استخدم نسخة المستودع التي تحتوي التعديلات المختبرة في فرع العمل الحالي. لا تستخدم نسخة قديمة من `main` قبل وصول إصلاحات الأداة.
-2. على Windows، شغّل `tools\recovery\START-RECOVERY.bat` بالنقر المزدوج. المشغّل يصل الآن إلى جذر المستودع، يستخدم `npm ci`، ويحافظ على CRLF. اختبار Windows الحقيقي غير متاح هنا.
-3. حمّل `HRC-FULL-2026-11-19.sql` داخل الصفحة المحلية.
-4. ألصق رابط **Session pooler** للمشروع الهدف محلياً (اختر وضع **Session** لا **Transaction**). هذا بديل IPv4 عندما لا يملك الجهاز مسار IPv6 إلى اتصال Supabase المباشر. استخدم الرابط الذي تعرضه لوحة المشروع، قاعدة `postgres` والمنفذ `5432`؛ في هذا المشروع يجب أن يكون المستخدم `postgres.tkxbmopxcftxpcoczweq` والمضيف `aws-0-eu-west-1.pooler.supabase.com`. الأداة ترفض أي مشروع آخر وتتحقق من شهادة TLS. لا ترسل رابط الاتصال أو كلمة المرور.
-   رابط **Direct connection** ما زال مدعوماً، لكنه قد يفشل على شبكات لا توجّه IPv6.
-5. افحص الهدف، راجع الأعداد، واكتب «استرجع» فقط بعد ظهور الحالة المتوقعة. الأداة تعيد إنشاء صف `recovery_control` داخلياً بعد نجاح الملف وتتحقق من وجوده.
-6. انتظر جدول النتائج ولا تغلق الصفحة أو نافذة الأداة. أرسل لي الأعداد النهائية ورسالة النجاح/الخطأ فقط؛ احذف أي رابط اتصال أو كلمة مرور من النص.
+ماذا تفعل الأداة بالترتيب:
 
-لا تُشغّل الموقع ولا اختبارات الكتابة على Supabase قبل مقارنة الأعداد الحية بالقيم في تقرير النتائج.
+1. تطبع الحجم و`SHA-256` وعدد العبارات (400 عبارة + ذيل تعليقات) وتقارنها بالبصمة المعروفة.
+2. **ترقّع** عقدتَي المشغّلات في نسخة مؤقتة (`03-restore-trigger-blocks.sql`) — بلا لمس الأصل.
+3. تنفّذ الملف **كاملاً في معاملة واحدة** عبر بروتوكول PostgreSQL البسيط
+   (‏فشل أي عبارة = تراجع كلي، لا صفوف نصف مسترجعة).
+4. تشغّل استعلامات التحقّق وتطبع **16 قيمة** مقابل المتوقّع، و`✅ PASS` أو `❌ FAIL`
+   مع رمز خروج غير صفري عند أي اختلاف.
+5. تحفظ سجلاً `restore-<التاريخ>.log` (بلا كلمة مرور — تُقنَّع).
 
-## الخطوة 3 — الصور
+### إذا نزّلت نسخة **جديدة** بعد 2026-11-20
 
-النسخة تحتوي روابط فقط، والهدف لا يحتوي bucket `job-images`. أرسل الصور الأصلية كملفات صور منفردة، إن توفرت، لهذه المسارات:
+المولّد أُصلح: يُصدر `DISABLE/ENABLE TRIGGER <اسم>` بلا `TRIGGER ALL`، فتُنفَّذ بلا ترقيع.
+لكن بصمتها مختلفة وأعدادها أحدث، فأضف `--allow-new`:
 
-- `jobs/hrc-1043.jpg`
-- `jobs/hrc-1045.jpg`
-- `jobs/hrc-1046.jpg`
-- `jobs/hrc-1057.jpg`
-- `jobs/new.jpg`
+```bash
+node tools/restore-full-file.mjs "C:\path\to\HRC-FULL-<الجديد>.sql" --dsn "..." --allow-new --yes
+```
 
-لا ZIP ولا صور من مشروع الإنتاج. إن لم تتوفر، تبقى الصور مفقودة ولا أبدّل روابطها برسومات عامة.
+| بلا `--allow-new` | مع `--allow-new` |
+|---|---|
+| تتوقّف وتطلب تأكيداً صريحاً — لا تنفّذ ملفاً مجهول البصمة بصمت | تُقرأ الأعداد المتوقّعة من **ترويسة الملف** (`--  الأعداد : …`) بدل أرقام 2026-11-19 |
+| | `printed` و`spent` تُعرض معلوماتية (الترويسة لا تذكرهما) |
 
-## الخطوة 4 — حسابات الموظفين بعد نجاح الاسترجاع
+وإن كان الملف نظيفاً أصلاً تطبع: «ترقيع: لا حاجة — الملف لا يحوي TRIGGER ALL».
 
-الكود يستخدم `signInWithPassword` ويحوّل اسم المستخدم إلى بريد على النطاق الافتراضي `hrc-babil.com`. لذلك العناوين الموافقة للكود حالياً تكون:
+### البديل: psql (الأدق، عبارة عبارة)
 
-- `admin` → `admin@hrc-babil.com`
-- `AliAhmed919` → `aliahmed919@hrc-babil.com`
-- `Mohammed` → `mohammed@hrc-babil.com`
+```bash
+# ترقيع أولاً — لازم لملف نُزِّل قبل 2026-11-20 (يحمل TRIGGER ALL)
+# المولّد في الموقع أُصلح اليوم، فأي تنزيل جديد لا يحتاج هذا الترقيع.
+node tools/patch-restore-triggers.mjs HRC-FULL-2026-11-19.sql HRC-FULL-2026-11-19-patched.sql
 
-العناوين ذات `.local` لا تطابق النطاق الافتراضي الحالي. لم تُنشأ حسابات حتى الآن. بعد الاسترجاع تُنشأ من لوحة **Authentication → Users** بالطريقة الإدارية المدعومة، مع تأكيد الحساب من اللوحة لتجنّب إرسال بريد أثناء الاختبار؛ ثم تُربط صفوف الموظفين بـ`auth_id` بعد فحصها. لا ترسل كلمات مرور هنا.
+# ثم التنفيذ (‏psql يسأل كلمة المرور بنفسه إن لم تضعها في الـDSN)
+PGPASSWORD='...' psql "host=aws-0-eu-west-1.pooler.supabase.com port=5432 dbname=postgres user=postgres.tkxbmopxcftxpcoczweq sslmode=require" \
+  -v ON_ERROR_STOP=1 -f HRC-FULL-2026-11-19-patched.sql
+```
 
-## بعد الاسترجاع
+أو نفس الشيء بالأداة: أضف `--driver psql` (تحتاج `psql` في `PATH`، أو `--psql "C:\Program Files\PostgreSQL\17\bin\psql.exe"`).
 
-بعد استلام نتائج التنفيذ الحي، أتحقق من أعداد الجداول والقيم الخمس (`printed`, `spent`, `counter`, `cards`, `disabled_triggers`) على الهدف. بعدها فقط نراجع PostgREST/RLS وإعداد `brc` المكشوفة وروابط Auth، ثم نفعّل `enabled` في إعداد المتصفح بعد اختبارات القراءة والكتابة المصرّح بها. الإعداد الحالي موجّه للهدف لكنه متوقف. لا تغيير DNS أو نشر Cloudflare من دون موافقتك.
+### ما يجب أن تراه في النهاية
 
-تجد آخر نتائج الفحص والاختبارات في `RESTORE-RESULTS-AR.md`.
+```
+✔ printed 422 · spent 46 · counter 176 · cards 726 · disabled_triggers 0
+✔ staff 3 · applicants 726 · jobs 22 · job_attempts 1537 · issued_serials 770
+✔ card_number_registry 176 · audit_log 3809 · settings 5
+✔ recovery_chances 1537 · recovery_prints 726 · office_receipts 0
+✅ PASS
+```
+
+**أي `❌ FAIL`:** توقّف. لا تشغّل الموقع. أرسل لي السجل (بلا كلمة المرور) —
+ولا تُعِد التنفيذ قبل فحص حالة `brc` (قد تكون المعاملة تراجعت كلياً).
+
+---
+
+## الطريقة ب — أنفّذها أنا (تحتاج موافقتك + رفعاً واحداً منك)
+
+إن أردت أن أُنفّذ الاسترجاع بنفسي:
+
+1. لوحة Supabase → **Storage** → **New bucket** باسم `hrc-restore` (**Private**).
+2. ارفع `HRC-FULL-2026-11-19.sql` داخله.
+3. أخبرني — أُنشئ دالة Edge تقرأ الكائن بالمفتاح السري، وتنفّذ الملف على
+   القاعدة، وتكتب سجل التقدّم في جدول أقرأه عبر الموصل. (أُعيد إنشاء دور
+   تنفيذ مؤقت وأزيله بعدها.)
+
+> هذه الطريقة أبطأ وأكثر نقاط فشل من الطريقة أ (‏الدالة تعمل «عمياء» ولا أرى
+> مخرجاتها إلا عبر جدول سجل)، لكنها تعني أنني أُنفّذ كل شيء بعد رفعك للملف.
+
+---
+
+## بعد الاسترجاع — بالترتيب (كل خطوة لها تحقّق)
+
+### ١) أوقف الجدولة مؤقتاً قبل أي اختبار كتابة
+
+`brc-auto-release` يعمل **كل دقيقة** وقد يغيّر حالة `job_attempts` بعد الاسترجاع:
+
+```sql
+update cron.job set active = false where jobname in
+ ('brc-auto-release','recovery-auto-backup','recovery-ensure-fresh','hrc-card-archive-daily');
+-- أعدها true في نهاية الاختبارات
+```
+
+### ٢) اكشف سكيما `brc` لـPostgREST (وإلا الواجهة لا تعمل)
+
+Dashboard → **Project Settings → API → Exposed schemas** → أضف `brc`
+(‏القيمة الحالية لا تحتويها، والكود يستعلم `schema:'brc'`).
+
+### ٣) `app.brc_secret` — سطر واحد، بلا تذكرة دعم
+
+`ALTER DATABASE … SET app.brc_secret` **لا يعمل** على هذا المشروع (‏42501: دور `postgres`
+ليس superuser). لذلك أُضيف بديل داخل القاعدة: جدول `brc.app_secrets` محمي بـRLS وبلا
+سياسة، و`verify_token` تقرأ الإعداد أولاً ثم الجدول (نفس البصمة تماماً).
+
+```sql
+-- في SQL Editor لمشروع الهدف، بعد الاسترجاع:
+insert into brc.app_secrets (name, value)
+values ('brc_secret', '<مفتاح الإنتاج نفسه>')
+on conflict (name) do update set value = excluded.value, updated_at = now();
+
+-- تحقّق (يجب 64):
+select length(brc.verify_token('HRC-BC-000120'));
+```
+
+* المفتاح نفسه (لا مفتاح جديد) ⇒ **بصمات البطاقات المطبوعة سابقاً تبقى صالحة**.
+* تقرأه من الإنتاج بـ`select current_setting('app.brc_secret');` — قراءة فقط، ولا ترسله لأحد.
+* إن أردت لاحقاً ضبط الإعداد على مستوى القاعدة (‏Custom Postgres Config)، سيأخذ
+  `verify_token` الإعداد ويتجاهل الجدول تلقائياً — بلا أي تغيير في السلوك.
+
+### ٤) الحسابات الثلاثة + الربط
+
+Dashboard → **Authentication → Users → Add user** (‏Auto Confirm = مفعّل):
+
+| Username | البريد المقترح | الدور في `brc.staff` |
+|---|---|---|
+| `admin` | `admin@brc-babil.local` | `admin` |
+| `AliAhmed919` | `aliahmed919@brc-babil.local` | `admin` |
+| `Mohammed` | `mohammed@brc-babil.local` | `staff` |
+
+كلمات المرور تكتبها أنت في اللوحة (لا ترسلها). ثم الربط بعد الفحص (لا يطمس ربطاً قائماً):
+
+```sql
+-- فحص أولاً: يجب أن تكون كلها NULL
+select username, auth_id from brc.staff order by username;
+
+-- الربط بالبريد
+update brc.staff s
+   set auth_id = u.id
+  from auth.users u
+ where s.auth_id is null
+   and lower(u.email) = lower(s.username || '@brc-babil.local');
+
+-- تحقّق: 3 صفوف و3 روابط
+select username, role, active, (auth_id is not null) as linked from brc.staff order by username;
+```
+
+> إن كانت أسماء الدخول في الواجهة تُطابق `username` لا البريد، فافحص أولاً
+> `dashboard.html`/`assets/js/*` — الربط أعلاه مبني على البريد المقترح فقط.
+
+### ٥) الصور
+
+1. Storage → **New bucket** `job-images` (‏Private + سياسات القراءة كما في الإنتاج).
+2. ارفع الملفات الخمس بنفس المسارات (`jobs/hrc-1043.jpg`, `hrc-1045`, `hrc-1046`,
+   `hrc-1057`, `new.jpg`) — الروابط في `docs/rescue/MISSING-ITEMS.md` §٢.
+3. تحقّق: `select count(*) from storage.objects where bucket_id='job-images';` = 5
+4. بعدها فقط افحص `brc.jobs.image_url` ولا تستبدل أي رابط عشوائياً.
+
+### ٦) الواجهة — في بيئة اختبار فقط
+
+```bash
+node tools/supabase-repoint.mjs --check         # أين يظهر معرّف الإنتاج حالياً
+node tools/supabase-repoint.mjs <ref> <publishable-key>   # على نسخة اختبار، لا فرع النشر
+npm run build && npm start                      # معاينة محلية
+```
+
+⚠️ لا تنشر على دومين الشركة ولا تغيّر إعدادات Cloudflare بلا موافقة صريحة.
+
+### ٧) اختبارات
+
+```bash
+node tests/patch-restore-triggers.mjs   # 6/6 — تعمل بلا شبكة
+npm test                                # تحتاج قاعدة حيّة وشبكة
+```
+
+---
+
+## استرجاع الحال عند فشل
+
+1. لا تُعِد التنفيذ فوراً — الملف يبدأ بـ`TRUNCATE`.
+2. افحص: `select (select count(*) from brc.staff) s, (select count(*) from brc.applicants) a;`
+   * كلها 0 ⇒ المعاملة تراجعت كلياً، والسبب في السجل (`ERROR:` + رقم السطر).
+   * أعداد جزئية ⇒ لا يفترض أن يحدث مع سائق `pg` (معاملة واحدة)؛ مع `psql`
+     راجع أي عبارة نجحت.
+3. أرسل السجل لي (بلا كلمة مرور) — لا تحذف ولا تفرّغ شيئاً يدوياً.
+
+---
+
+## ملاحظات ويندوز و`CRLF`
+
+* `tools/recovery/START-RECOVERY.bat` يجب أن يبقى **CRLF** (`.gitattributes` يفرضه) — لا تحوّله.
+* PowerShell: ضع الـDSN بين علامتي اقتباس مفردتين `'` إن كانت كلمة المرور
+  تحتوي `$` أو `&`، أو استعمل `--driver pg` وتجنّب طباعة الـDSN.
+* لا تُشغّل أي أمر من هذا الدليل من داخل محرّر SQL في Supabase — المحرّر يقصّ
+  الملف عند ~2000 سطر ويقول «Success».

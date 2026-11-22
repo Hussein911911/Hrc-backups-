@@ -57,7 +57,7 @@ const DEMO_CARD_JOBS = [
   { id: 'd4', code: 'HRC-9004', title: 'موظف استقبال', status: 'available', governorate: 'كربلاء', region: 'المركز', shift: 'مسائي', salary_min: 550000, salary_max: 700000, vacancies: 1, gender: 'أنثى', category: 'خدمات' }
 ];
 function demoCardPage(html) {
-  return html.replace("var SUPA_URL='https://tkxbmopxcftxpcoczweq.supabase.co'", "var SUPA_URL=''");
+  return html.replace("var SUPA_URL='https://vqsvztudvfukyuerzcgx.supabase.co'", "var SUPA_URL=''");
 }
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');

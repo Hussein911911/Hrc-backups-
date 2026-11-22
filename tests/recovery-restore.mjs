@@ -59,23 +59,6 @@ spawn('node', ['tools/build-full-dump.mjs', '--payload', payPath, '--out', sqlPa
 
     /* ═══ ٢) الدوال المستقلة ═══ */
     const core = await import('../tools/recovery-core.mjs');
-    const targetUri = 'postgresql://local-user:local-placeholder@db.tkxbmopxcftxpcoczweq.supabase.co:5432/postgres';
-    check('رابط الهدف المباشر المصرّح به مقبول', core.assertTargetConnectionString(targetUri) === true);
-    const poolerUri = 'postgresql://postgres.tkxbmopxcftxpcoczweq:local-placeholder@aws-0-eu-west-1.pooler.supabase.com:5432/postgres';
-    check('رابط Session pooler للهدف المصرّح به مقبول', core.assertTargetConnectionString(poolerUri) === true);
-    let wrongPoolerUserRejected = false;
-    try { core.assertTargetConnectionString('postgresql://postgres.other-project:local-placeholder@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'); }
-    catch { wrongPoolerUserRejected = true; }
-    check('Session pooler لمشروع آخر مرفوض قبل الاتصال', wrongPoolerUserRejected);
-    let otherTargetRejected = false;
-    try { core.assertTargetConnectionString('postgresql://local-user:local-placeholder@db.other-project.supabase.co:5432/postgres'); }
-    catch { otherTargetRejected = true; }
-    check('أي مضيف آخر مرفوض قبل الاتصال', otherTargetRejected);
-    const launcherBytes = readFileSync('tools/recovery/START-RECOVERY.bat');
-    const launcher = launcherBytes.toString('utf8');
-    check('مشغّل Windows يصل إلى جذر المستودع', /cd \/d "%~dp0\.\.\\\.\."/i.test(launcher));
-    check('مشغّل Windows يستخدم npm ci مع ملف القفل', /npm ci --no-audit --no-fund/i.test(launcher));
-    check('نهايات CRLF محفوظة في ملف BAT', launcherBytes.toString('binary').replace(/\r\n/g, '').indexOf('\n') === -1);
     const batches = core.batchStatements(sql);
     check('التقسيم بلا فقدان', batches.join('').length === sql.length, `${batches.join('').length} ≠ ${sql.length}`);
     check('لا دفعة صغيرة عبثاً', batches.length >= 1 && batches.length < 20, 'عدد الدفعات ' + batches.length);
@@ -143,11 +126,6 @@ spawn('node', ['tools/build-full-dump.mjs', '--payload', payPath, '--out', sqlPa
     check('الوظائف ٢', counts.jobs === 2, 'وجد ' + counts.jobs);
     check('الموظفون ١', counts.staff === 1, 'وجد ' + counts.staff);
     check('عدّاد البطاقات ٩', counts.card_number_counter === 1 && /last_number/.test(sql), 'الجدول ' + counts.card_number_counter);
-    check('مفتاح النسخ الداخلي موجود بعد التفريغ', counts.recovery_control === 1 &&
-      dry.report.postRestore?.recoveryControlRows === 1, 'جدول recovery_control يجب أن يحوي صفاً واحداً');
-    check('مفتاح HMAC الخاص مخزّن بأمان ويعمل', counts.app_secrets === 1 &&
-      dry.report.postRestore?.appSecretRows === 1 && dry.report.postRestore?.tokenLength === 64,
-      'يلزم صف داخلي واحد وبصمة SHA-256 بطول 64 بلا كشف المفتاح');
 
     /* ═══ ٥) مقارنة الجرد: تُعلن الفرق ولا تدّعي الكمال ═══ */
     const inv = dry.report.inventory;

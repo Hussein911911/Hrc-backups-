@@ -198,12 +198,9 @@ class DemoHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split('?', 1)[0].split('#', 1)[0]
-        if path in ('/', '/preview', '/preview/', '/dashboard'):
+        if path in ('/', '/index.html', '/preview', '/preview/', '/dashboard'):
             self.path = '/dashboard.html'
             path = '/dashboard.html'
-        elif path in ('/site', '/site/'):
-            self.path = '/index.html'
-            path = '/index.html'
         if path == '/__demo_reset.js':
             self._send(RESET_JS.encode('utf-8'), 'application/javascript; charset=utf-8')
             return

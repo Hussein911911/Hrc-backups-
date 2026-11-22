@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 title أداة استرجاع قاعدة الشركة
-cd /d "%~dp0..\.."
+cd /d "%~dp0.."
 
 echo.
 echo   ==========================================================
@@ -24,7 +24,7 @@ if errorlevel 1 (
 rem ── ٢) هل الحزم مثبّتة؟ ─────────────────────────────────────
 if not exist "node_modules\pg" (
   echo   [1/2] تثبيت الأدوات مرة واحدة — يحتاج إنترنت دقيقة...
-  call npm ci --no-audit --no-fund
+  call npm install --no-audit --no-fund
   if errorlevel 1 (
     echo.
     echo   [x] فشل التثبيت. تحقق من الإنترنت ثم أعد المحاولة.

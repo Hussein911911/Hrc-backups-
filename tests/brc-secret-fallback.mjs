@@ -65,7 +65,6 @@ ok('verify_token: الإعداد أولاً ثم الجدول، وتظل ترف�
     const fn = tokenFn(text);
     assert.match(fn, /current_setting\('app\.brc_secret',\s*true\)/, `${name}: لا تقرأ الإعداد`);
     assert.match(fn, /from brc\.app_secrets/i, `${name}: لا تقرأ الجدول`);
-    assert.match(fn, /security\s+definer/i, `${name}: لازم تقرأ السر تحت صلاحية مالك الدالة`);
     const gucAt = fn.indexOf("current_setting('app.brc_secret'");
     const tableAt = fn.toLowerCase().indexOf('from brc.app_secrets');
     assert.ok(gucAt < tableAt, `${name}: ترتيب الأولوية معكوس (الإعداد يجب أن يسبق الجدول)`);

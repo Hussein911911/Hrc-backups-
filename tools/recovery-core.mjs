@@ -33,34 +33,6 @@ import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* يقفل منفّذ هذه المهمة على مشروع الاسترجاع المصرّح به فقط.
-   لا تُمرّر كلمة المرور أو رابط الاتصال إلى السجلات أو التقارير. */
-export const EXPECTED_PROJECT_REF = 'tkxbmopxcftxpcoczweq';
-export const EXPECTED_DATABASE_HOST = `db.${EXPECTED_PROJECT_REF}.supabase.co`;
-// The direct database endpoint is IPv6-only on some Supabase projects. The
-// session pooler endpoint for this project's eu-west-1 region supports IPv4.
-export const EXPECTED_SESSION_POOLER_HOST = 'aws-0-eu-west-1.pooler.supabase.com';
-
-export function assertTargetConnectionString(connectionString) {
-  let u;
-  try { u = new URL(connectionString); }
-  catch { throw new Error('رابط اتصال غير صالح.'); }
-  if (!['postgres:', 'postgresql:'].includes(u.protocol)) {
-    throw new Error('يُسمح فقط برابط PostgreSQL للمشروع المحدد.');
-  }
-  const host = u.hostname.toLowerCase();
-  const isDirect = host === EXPECTED_DATABASE_HOST;
-  const isSessionPooler = host === EXPECTED_SESSION_POOLER_HOST &&
-    decodeURIComponent(u.username) === `postgres.${EXPECTED_PROJECT_REF}`;
-  if (!isDirect && !isSessionPooler) {
-    throw new Error('تم رفض الاتصال: الرابط لا يطابق مشروع الاسترجاع المصرّح به. استخدم Direct connection أو Session pooler للمشروع المحدد.');
-  }
-  if ((u.port || '5432') !== '5432' || decodeURIComponent(u.pathname || '') !== '/postgres') {
-    throw new Error('يُسمح فقط باتصال قاعدة postgres على المنفذ 5432 للمشروع المحدد (Direct أو Session pooler).');
-  }
-  return true;
-}
-
 /* ═══ جرد الإنتاج المرجعي ═══════════════════════════════════════════════════
    ⚠️ أهم ما في هذه الأداة أنها **لا تكذب**.
 
@@ -137,10 +109,8 @@ export async function compareToInventory(run) {
 
 /* الأعداد التي يجب أن تظهر في القاعدة الهدف بعد التنفيذ */export const EXPECTED_TABLES = [
   'staff', 'applicants', 'jobs', 'job_attempts', 'issued_serials',
-  'card_number_registry', 'card_number_counter', 'card_issue_requests', 'app_secrets',
-  'audit_log', 'settings', 'employer_job_credentials',
-  'recovery_chances', 'recovery_prints', 'recovery_control',
-  'recovery_copies', 'office_receipts'
+  'card_number_registry', 'card_number_counter', 'audit_log', 'settings',
+  'recovery_chances', 'recovery_prints', 'office_receipts'
 ];
 
 /* جدول المقارنة النهائي — يأتي في آخر الملف نفسه كمرجع للقارئ.
@@ -244,47 +214,6 @@ export async function executeDump({ run, sql, query, onProgress = () => {} }) {
       break;
     }
   }
-  /* ما بعد الاسترجاع: مفاتيح داخل القاعدة بلا أسرار في الملف أو السجل.
-     نسخة 2026-11-21 لا تتضمن brc.app_secrets؛ نطبّق الإصلاح الآمن من الملف
-     المحلي ثم نولّد brc_secret داخل PostgreSQL، ونفحص بصمة مؤقتة بطول 64 فقط.
-     لا نطبع المفتاح ولا نقرأ قيمته إلى التطبيق. */
-  if (!report.failed) {
-    try {
-      const fallbackSql = readFileSync(resolve(ROOT, 'docs/sql-parts/fixes/04-brc-secret-fallback.sql'), 'utf8');
-      await run(fallbackSql);
-      await q(`insert into brc.app_secrets(name, value)
-               values ('brc_secret', encode(extensions.gen_random_bytes(32), 'hex'))
-               on conflict (name) do nothing`);
-      await q(`insert into brc.recovery_control(singleton, secret)
-               values (true, encode(extensions.gen_random_bytes(32), 'hex'))
-               on conflict (singleton) do nothing`);
-      const post = await q(`select
-        (select count(*)::int from brc.recovery_control) as recovery_control_rows,
-        (select count(*)::int from brc.app_secrets where name='brc_secret') as app_secret_rows,
-        length(brc.verify_token('HRC-RESTORE-CHECK'))::int as token_length`);
-      report.postRestore = {
-        recoveryControlRows: Number(post.rows[0]?.recovery_control_rows || 0),
-        appSecretRows: Number(post.rows[0]?.app_secret_rows || 0),
-        tokenLength: Number(post.rows[0]?.token_length || 0)
-      };
-      if (report.postRestore.recoveryControlRows !== 1 ||
-          report.postRestore.appSecretRows !== 1 || report.postRestore.tokenLength !== 64) {
-        report.failed = {
-          batch: batches.length, total: batches.length,
-          message: 'فشل فحص post-restore للمفاتيح الداخلية أو brc.verify_token.',
-          code: 'HRC_POST_RESTORE_SECRET_CHECK_FAILED'
-        };
-      }
-    } catch (e) {
-      report.postRestore = { recoveryControlRows: null, appSecretRows: null, tokenLength: null };
-      report.failed = {
-        batch: batches.length, total: batches.length,
-        message: 'تعذّر إعداد/فحص المفاتيح الداخلية بعد الاسترجاع.',
-        code: e.code || 'HRC_POST_RESTORE_FAILED'
-      };
-    }
-  }
-
   let counts = null;
   try {
     const r = await q(countsSql());

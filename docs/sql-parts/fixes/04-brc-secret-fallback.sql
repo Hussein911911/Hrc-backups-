@@ -27,7 +27,7 @@ revoke all on brc.app_secrets from public, anon, authenticated, service_role;
 
 -- ٢) الدالة: نفس التوقيع والنتيجة، مع مصدر احتياطي
 create or replace function brc.verify_token(p_serial text) returns text
-language plpgsql stable security definer
+language plpgsql stable
 set search_path = brc, public, extensions
 as $$
 declare v_secret text;
@@ -51,9 +51,8 @@ begin
 end $$;
 
 -- ٣) الصلاحيات: تبقى مبطَلة عن الجميع كما في المخطط الأصلي
-revoke execute on function brc.verify_token(text) from public;
 revoke all on function brc.verify_token(text) from public, anon, authenticated;
-revoke all on function brc.verify_token(text) from service_role;
+grant execute on function brc.verify_token(text) to service_role;
 
 -- ٤) تحقّق سريع (لا يطبع أي قيمة سرّية)
 select
@@ -62,15 +61,19 @@ select
   (select length(nullif(current_setting('app.brc_secret', true), '')) is not null) as guc_set;
 
 -- ═══════════════════════════════════════════════════════════════════════════
---  إعداد المفتاح بعد الاسترجاع
+--  كيف تُدخل المفتاح (مرة واحدة، من جهازك، ولا يمرّ في أي محادثة)
 --  ---------------------------------------------------------------------------
---  أداة الاسترجاع تُنشئ قيمة عشوائية 32 بايت داخل مشروع الهدف نفسه ثم تتحقق
---  أن brc.verify_token تُنتج بصمة بطول 64، من دون إخراج المفتاح إلى الطرفية.
---  لا تنسخ مفتاحاً من المشروع المحظور ولا تضع قيمة سرّية في SQL أو Git.
+--  على **مشروع الإنتاج** (قراءة فقط — لا تعدّل شيئاً هناك):
+--      select current_setting('app.brc_secret');          -- انسخ القيمة
 --
---  إذا طُبّق الإصلاح يدوياً فقط، ولّد المفتاح داخل قاعدة الهدف:
---      insert into brc.app_secrets(name,value)
---      values ('brc_secret', encode(extensions.gen_random_bytes(32),'hex'))
---      on conflict (name) do nothing;
---      select length(brc.verify_token('HRC-RESTORE-CHECK')); -- 64
+--  على **مشروع الهدف**: SQL Editor → الصق (بعد تعويض <القيمة>):
+--      insert into brc.app_secrets (name, value)
+--      values ('brc_secret', '<القيمة>')
+--      on conflict (name) do update
+--        set value = excluded.value, updated_at = now();
+--
+--  تحقّق أنها صارت تعمل:
+--      select length(brc.verify_token('HRC-BC-000120'));   -- 64 (بصمة SHA-256 hex)
+--      -- وللمقارنة مع الإنتاج (نفس المفتاح ⇒ نفس البصمة):
+--      select brc.verify_token('HRC-BC-000120');
 -- ═══════════════════════════════════════════════════════════════════════════

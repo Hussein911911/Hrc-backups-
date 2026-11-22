@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<link rel="preconnect" href="https://tkxbmopxcftxpcoczweq.supabase.co" crossorigin>
-<link rel="dns-prefetch" href="//tkxbmopxcftxpcoczweq.supabase.co">
+<link rel="preconnect" href="https://kdtatwuycidndsulbnqc.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="//kdtatwuycidndsulbnqc.supabase.co">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script data-phone-viewport>
@@ -5413,7 +5413,6 @@ body.chosen-modal-open .app{
           الدالة موجودة في brc (نفس العطل المُصلَح سابقاً في cloud-http.js).
      عميل HRCHttp المحلي يعلن الترويستين معاً ولا يترك الصفحة رهينة طرف خارجي. ── -->
 <div id="chance-print-root" aria-hidden="true"></div>
-<script src="assets/js/supabase-config.js"></script>
 <script src="assets/js/cloud-http.js"></script>
 <script src="assets/js/iraq-admin.js"></script>
 <script src="assets/js/apply-navigation.js"></script>
@@ -5432,6 +5431,8 @@ var IRAQ=(window.HRC_IRAQ)||{};
 /* ═══════════════════════════════════════════════════════════════
    المتغيرات
    ═══════════════════════════════════════════════════════════════ */
+var SUPA_URL='https://kdtatwuycidndsulbnqc.supabase.co';
+var SUPA_KEY='sb_publishable_T4tcGsQpLKJz7GoTnn8uKQ_ORLYKDCC';
 var SCHEMA='brc';
 var client=null, cardSerial=null, cardData=null, jobs=[];
 var chancesLeft=0, appliedJobs=[], selectedGender='ذكر', currentFilter='الكل';
@@ -7444,12 +7445,10 @@ var dataLoading=false;
 function ensureClient(){
   if(client)return true;
   try{
-    var cfg=window.HRCSupabaseConfig;
-    if(!cfg||!cfg.enabled||!cfg.url||!cfg.publishableKey)return false;
     if(!window.HRCHttp||!window.HRCHttp.createClient)return false;
     /* HRCHttp يعلن سكيما brc في Accept-Profile وContent-Profile معاً — شرط نجاح
-       نداءات RPC. لا يُنشأ عميل قبل تفعيل الهدف بعد اكتمال الاسترجاع والإعداد. */
-    client=window.HRCHttp.createClient(cfg.url,cfg.publishableKey,{schema:cfg.schema||SCHEMA});
+       نداءات RPC (انظر رأس cloud-http.js). */
+    client=window.HRCHttp.createClient(SUPA_URL,SUPA_KEY,{schema:SCHEMA});
     return true;
   }catch(e){return false;}
 }

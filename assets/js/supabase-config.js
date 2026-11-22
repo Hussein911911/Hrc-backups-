@@ -1,24 +1,36 @@
 /* ===========================================================================
  *  HRC — إعداد الاتصال بـ Supabase
  *  ---------------------------------------------------------------------------
- *  هذا الملف يُنشر مع الواجهة؛ Project URL وPublishable key عامّان بطبيعتهما.
- *  لا تضع هنا أبداً service_role أو sb_secret أو كلمة مرور قاعدة البيانات
- *  أو app.brc_secret. الأمان الحقيقي من RLS وسياسات المخطط.
+ *  ⚠️ هذا الملف يُنشر مع الواجهة، فالمحتوى هنا **عامّ بحكم التصميم**:
+ *    • Project URL      → ظاهر لأي زائر
+ *    • Publishable key  → مفتاح عام مصمَّم للنشر (بديل anon القديم)
+ *
+ *  🔴 لا تضع هنا أبداً:
+ *    • Secret key  (sb_secret_…) — تتجاوز كل سياسات RLS
+ *    • كلمة مرور قاعدة البيانات
+ *    • app.brc_secret (سرّ توقيع البصمة)
+ *    كلها تُضبط في Supabase أو متغيّرات بيئة على الخادم، لا في كود الواجهة.
+ *
+ *  الأمان الحقيقي يأتي من سياسات RLS في docs/schema.sql — لا من إخفاء المفتاح.
  * =========================================================================== */
 (function (root) {
   'use strict';
 
   root.HRCSupabaseConfig = {
-    /* مشروع HRC Backup المصرّح به فقط */
-    url: 'https://tkxbmopxcftxpcoczweq.supabase.co',
+    /* مشروع منصة مكسب للتوظيف — منطقة فرانكفورت */
+    url: 'https://kdtatwuycidndsulbnqc.supabase.co',
 
-    /* Publishable key عام خاص بمشروع الهدف */
-    publishableKey: 'sb_publishable_6Ft7Dm8XcTU351rM_sCW9Q_Ra9aF52h',
+    /* المفتاح العام (Publishable) — آمن للعرض في المتصفح */
+    publishableKey: 'sb_publishable_-3ISdBJhjVX-DA9lXX7IUg_GaQNp8QK',
 
+    /* كل كائنات المشروع تعيش في سكيما brc منفصلة عن public */
     schema: 'brc',
 
-    /* يبقى مطفأ إلى أن يكتمل الاسترجاع وتُعرَض brc وتنجح فحوص ما بعد الاسترجاع */
-    enabled: false,
+    /* فعّال؟ يُستخدم للتبديل بين الوضع المحلي والسحابي أثناء الترحيل التدريجي */
+    enabled: true,
+
+    /* الوضع النهائي: Supabase Auth + brc.staff حصراً، بلا دخول محلي.
+       لا تُعِد تفعيل الوضع الانتقالي على قاعدة الإنتاج. */
     enforceAuth: true
   };
 })(typeof window !== 'undefined' ? window : globalThis);

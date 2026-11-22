@@ -368,14 +368,17 @@ begin
   return v;
 end $$;
 
--- بصمة التحقق المطبوعة داخل الكيو آر كود (توقيع HMAC عبر مفتاح خاص بالخادم)
--- لا يحتوي المستودع أي سرّ افتراضي. verify_token تقرأ app.brc_secret إن كان
--- متاحاً، وإلا تستخدم brc.app_secrets (RLS بلا سياسات وREVOKE لأدوار API).
--- أداة الاسترجاع تولّد القيمة داخل قاعدة الهدف ولا تعرضها؛ لا تنسخ مفاتيح من مشروع آخر.
+-- بصمة التحقق المطبوعة داخل الكيو آر كود (توقيع HMAC عبر مفتاح الخادم)
+-- ⚠️ لا تضع سرّاً افتراضياً مكتوباً في الملف: هذا الملف منشور في المستودع، فأي سرّ مكتوب
+--    هنا يصبح معروفاً للجميع ويصير تزوير البصمة ممكناً. يجب ضبط المفتاح قبل الاستخدام:
+--      alter database postgres set app.brc_secret = '<مفتاح عشوائي 32+ حرفاً>';
+--      -- ثم أعد الاتصال (أو: select pg_reload_conf();)
+--    أو من Supabase: Project Settings → Database → Configuration → Custom settings.
+--    توليد مفتاح قوي:  openssl rand -hex 32
 -- ملاحظة: أُضيف extensions للمسار لأن Supabase يثبّت pgcrypto (دالة hmac) في سكيما
 -- extensions وليس public، فبدونها يفشل النداء بـ «function hmac(...) does not exist».
 create or replace function brc.verify_token(p_serial text) returns text
-language plpgsql stable security definer
+language plpgsql stable
 set search_path = brc, public, extensions
 as $$
 declare v_secret text;
@@ -1806,9 +1809,7 @@ end $$;
 --    tests/function-acl-audit.mjs.
 alter default privileges revoke execute on functions from public;
 
-revoke execute on function brc.verify_token(text) from public;
-revoke all on function brc.verify_token(text) from public, anon, authenticated;
-revoke all on function brc.verify_token(text) from service_role;
+revoke execute on function brc.verify_token(text)    from public;
 revoke execute on function brc.next_job_code()       from public;
 revoke execute on function brc.next_form_serial()    from public;
 revoke execute on function brc.request_form(text, text, text, date, text, text, text) from public;
@@ -3449,8 +3450,9 @@ create trigger trg_block_fingerprint_audit
 
 -- ===========================================================================
 --  ٦) نقل صور الوظائف من data:URL إلى Storage
---     الرابط الافتراضي موجّه إلى مشروع الهدف؛ ويُقدَّم إعداد app.supabase_url
---     إن ضُبط لكل بيئة. لا تستخدم هذا الإصلاح على مشروع الإنتاج القديم.
+--     ⚠️ الرابط الأساسي مثبّت على المشروع الحالي بقصد في الإنتاج. هنا نجعله
+--     يقرأ من إعداد المشروع إن وُجد، وإلا يبقى كسلاً — لأن قاعدة جديدة تعني
+--     معرّف مشروع جديد.
 -- ===========================================================================
 create or replace function brc.relocate_job_images(p_bucket text default 'job-images'::text, p_dry_run boolean default true)
 returns jsonb language plpgsql security definer
@@ -3461,7 +3463,7 @@ declare
   moved int := 0; failed int := 0; errs jsonb := '[]'::jsonb; ok_list jsonb := '[]'::jsonb;
   base_url text := coalesce(
     nullif(coalesce(current_setting('app.supabase_url', true), ''), ''),
-    'https://tkxbmopxcftxpcoczweq.supabase.co');
+    'https://vqsvztudvfukyuerzcgx.supabase.co');
 begin
   if not brc.is_admin() then raise exception 'نقل صور الوظائف صلاحية المدير العام فقط'; end if;
   if to_regclass('storage.buckets') is null then

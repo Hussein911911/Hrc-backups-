@@ -56,7 +56,7 @@ node office/server.mjs --init
 
 ```json
 {
-  "cloudUrl": "https://tkxbmopxcftxpcoczweq.supabase.co",
+  "cloudUrl": "https://vqsvztudvfukyuerzcgx.supabase.co",
   "publishableKey": "المفتاح العام الموجود في assets/js/supabase-config.js",
   "hosts": ["office.company.local:8443"],
   "port": 8443,

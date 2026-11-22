@@ -431,7 +431,7 @@ if (process.env.DBG) {
   console.log('\n—— نداءات متصفح الموظفة ——');
   server.calls.filter((c) => c.browser === 'employee').forEach((c) => {
     if (c.inserted) return console.log('  INSERT', c.inserted, JSON.stringify(c.row));
-    console.log('  ' + c.method + ' ' + c.url.replace('https://tkxbmopxcftxpcoczweq.supabase.co', '') +
+    console.log('  ' + c.method + ' ' + c.url.replace('https://vqsvztudvfukyuerzcgx.supabase.co', '') +
       (c.session ? '  [جلسة ' + c.session + ']' : (c.svc ? '  [مفتاح خدمة]' : '  [بلا جلسة]')));
   });
 }

@@ -37,7 +37,7 @@ import { randomBytes } from 'node:crypto';
 import { exec } from 'node:child_process';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { executeDump, inspectTarget, EXPECTED_TABLES, assertTargetConnectionString, EXPECTED_PROJECT_REF } from './recovery-core.mjs';
+import { executeDump, inspectTarget, EXPECTED_TABLES } from './recovery-core.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TOKEN = randomBytes(18).toString('hex');
@@ -75,7 +75,6 @@ async function body(req, limit = MAX_BODY) {
    ⚠️ نستورد `pg` عند الطلب لا في الأعلى: الأداة يجب أن تفتح وتشرح نفسها
    حتى لو لم تُثبَّت الحزمة بعد. فالمستخدم يرى رسالة مفهومة بدل انهيار. */
 async function makeRunner(connString) {
-  assertTargetConnectionString(connString);
   let pg;
   try { pg = (await import('pg')).default; }
   catch (e) {
@@ -83,7 +82,7 @@ async function makeRunner(connString) {
   }
   const client = new pg.Client({
     connectionString: connString,
-    ssl: /supabase\.(co|com)/.test(connString) ? { rejectUnauthorized: true } : undefined,
+    ssl: /supabase\.(co|com)/.test(connString) ? { rejectUnauthorized: false } : undefined,
     statement_timeout: 0,
     query_timeout: 0
   });
@@ -117,7 +116,6 @@ const server = createServer(async (req, res) => {
       try { await import('@electric-sql/pglite'); pgliteOk = true; } catch (e) {}
       return json(res, 200, {
         ok: true, pg: pgOk, pglite: pgliteOk, expectedTables: EXPECTED_TABLES,
-        expectedProjectRef: EXPECTED_PROJECT_REF,
         lastRun: lastRun && { at: lastRun.at, counts: lastRun.counts, failed: lastRun.failed }
       });
     }
@@ -154,7 +152,7 @@ const server = createServer(async (req, res) => {
            auth.uid()/auth.jwt() وسكيما extensions. التنفيذ على PostgreSQL
            عادي يفشل في منتصف الطريق ويترك قاعدة مشوّهة. نوقف قبل أول جملة. */
         if (!before.looksLikeSupabase) {
-          return json(res, 200, { ok: false, error: 'الرابط لا يبدو مشروع Supabase (ناقص auth/extensions). تأكد أنه رابط Session pooler للمشروع الهدف.', before, report: null });
+          return json(res, 200, { ok: false, error: 'الرابط لا يبدو مشروع Supabase (ناقص auth/extensions). تأكد أنه رابط Direct connection للمشروع الجديد.', before, report: null });
         }
         const report = await executeDump({ run: runner, query: runner, sql });
         lastRun = { at: new Date().toISOString(), counts: report.counts, failed: report.failed, before };
