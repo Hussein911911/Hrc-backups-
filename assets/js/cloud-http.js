@@ -26,9 +26,14 @@
     function headers(write, both) {
       var h = {
         apikey: key,
-        Authorization: 'Bearer ' + key,
         Accept: 'application/json'
       };
+      /* Publishable keys (sb_publishable_…) are API keys, not JWTs. Sending one
+         as Authorization: Bearer makes the gateway reject it as an invalid key.
+         Keep the legacy anon-JWT behavior, but only attach Bearer for JWT keys. */
+      if (!/^sb_(?:publishable|secret)_/.test(String(key || ''))) {
+        h.Authorization = 'Bearer ' + key;
+      }
       /* السكيما تُعلَن في الترويسة: بلا Accept-Profile يقرأ PostgREST من
          public دائماً فيرد PGRST205 «جدول غير موجود» — وهو أشهر خطأ إعداد. */
       if (both) {
