@@ -3677,7 +3677,7 @@ end $$;
 --     self_service_card  = card_lookup_guard ← self_service_card_unguarded + فتح الملف
 --  ويبقى `verify_form` يُقنّع بلا بصمة — لأن رابطه العام يمكن تخمينه بالتسلسل.
 
-create or replace function brc.lookup_card(p_serial text, p_code text)
+create or replace function brc.lookup_card(p_serial text, p_code text default '')
 returns jsonb language plpgsql security definer
 set search_path = brc, public, pg_temp
 as $function$
@@ -3703,7 +3703,7 @@ begin
   return v_body;
 end $function$;
 
-create or replace function brc.self_service_card(p_serial text, p_code text)
+create or replace function brc.self_service_card(p_serial text, p_code text default '')
 returns jsonb language plpgsql security definer
 set search_path = brc, public, pg_temp
 as $function$
