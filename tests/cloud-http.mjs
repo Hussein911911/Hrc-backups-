@@ -65,9 +65,16 @@ try {
       h['Accept-Profile'] === 'brc', 'Accept-Profile=' + h['Accept-Profile']);
     check('rpc يرسل Content-Profile: brc أيضاً (مخطط الحمولة)',
       h['Content-Profile'] === 'brc', 'Content-Profile=' + h['Content-Profile']);
-    check('rpc يرسل المفتاح والتخويل وContent-Type',
-      h['apikey'] === KEY && h['Authorization'] === 'Bearer ' + KEY && h['Content-Type'] === 'application/json');
+    check('مفتاح publishable يُرسل في apikey دون تزوير ترويسة Bearer',
+      h['apikey'] === KEY && h['Authorization'] === undefined && h['Content-Type'] === 'application/json');
   }
+
+  /* مفاتيح anon القديمة هي JWT فعلياً، فتظل تعمل كترويسة Bearer للتوافق. */
+  const LEGACY_JWT = 'eyJhbGciOiJub25lIn0.eyJyb2xlIjoiYW5vbiJ9.signature';
+  const legacyClient = HRCHttp.createClient(URL_, LEGACY_JWT, { schema: 'brc' });
+  await legacyClient.rpc('lookup_card', { p_serial: 'CARD-1' });
+  check('مفتاح anon القديم بصيغة JWT يبقى Bearer للتوافق',
+    captured.headers.apikey === LEGACY_JWT && captured.headers.Authorization === 'Bearer ' + LEGACY_JWT);
 
   /* ═══ 2) قراءة الجداول تبقى كما كانت: Accept-Profile وحده ═══ */
   step(2, 'from().select(): قراءة الجداول بلا تغيير');
