@@ -31,7 +31,7 @@ set search_path = brc, public;
    (function is not unique) فيتعطّل التقديم الذاتي بالكامل. */
 drop function if exists brc.self_service_card(text);
 
-create or replace function brc.self_service_card(p_serial text, p_code text)
+create or replace function brc.self_service_card(p_serial text, p_code text default '')
 returns jsonb
 language plpgsql security definer
 set search_path = brc, public
@@ -98,7 +98,7 @@ grant execute on function brc.self_service_card(text, text) to anon, authenticat
 /* lookup_card: كانت لا تزال تُرجع الاسم والهاتف بلا رمز — صُحّحت بنفس المنطق. */
 drop function if exists brc.lookup_card(text);
 
-create or replace function brc.lookup_card(p_serial text, p_code text) returns jsonb
+create or replace function brc.lookup_card(p_serial text, p_code text default '') returns jsonb
 language plpgsql security definer
 set search_path = brc, public
 as $$

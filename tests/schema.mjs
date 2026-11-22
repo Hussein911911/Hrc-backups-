@@ -151,6 +151,10 @@ check('تعريفات الدوال: 78 تعريفاً، 71 دالة فعلية (
 check('دوال الجدولة المرنة والتقليم موجودة',
   ['brc.recovery_retention_keep','brc.recovery_prune','brc.recovery_cron_expr','brc.recovery_schedule_set']
     .every(n=>funcs.some(x=>x.name===n)));
+check('نداء قديم بالباركود فقط يبقى متوافقاً دون إنشاء overload إضافي',
+  RAW.includes("function brc.lookup_card(p_serial text, p_code text default '')") &&
+  RAW.includes("function brc.self_service_card(p_serial text, p_code text default '')") &&
+  existsSync(join(ROOT, 'supabase/migrations/20261120120000_card_rpc_optional_code_compat.sql')));
 check('التقليم لا يمسّ نسخ الأمان (safety=true)',
   /recovery_prune[\s\S]{0,700}safety\s*=\s*false/i.test(RAW));
 check('النسخة المجدولة تُبقي آخر N ولا تحذف كل ما قبلها',
@@ -404,7 +408,8 @@ const REQUIRED_MIGRATIONS = [
   '20261105120000_card_issue_numbers.sql',
   '20261110150000_company_phone_numbers.sql'      /* أرقام خدمة العملاء الجديدة */,
   '20261111120000_jobs_staff_delete.sql',
-  '20261111235000_cards_insert_admin_only.sql'
+  '20261111235000_cards_insert_admin_only.sql',
+  '20261120120000_card_rpc_optional_code_compat.sql'
 ];
 const MIG_NAME = '20260915000000_brc_initial_schema.sql';
 let migNames = [];
