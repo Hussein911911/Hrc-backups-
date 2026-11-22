@@ -122,8 +122,11 @@ try {
   const argsSeen=[];
   const caseClient={rpc:async (name,args)=>{argsSeen.push({name,args});return {data:{ok:false,error:'اختبار'},error:null}}};
   await C.lookupCard(caseClient,' k7m2xq9t4r ');
+  await C.lookupCard(caseClient,' HRC-BC-000002 ', ' 9A7B ');
   await C.verifyForm(caseClient,' hrc-no-900001 ',null);
-  check('بحث البطاقة والتحقق يرسلان نفس الرقم مهما اختلف حجم الحروف',argsSeen[0].args.p_serial==='K7M2XQ9T4R' && argsSeen[1].args.p_serial==='HRC-NO-900001');
+  check('بحث البطاقة والتحقق يرسلان نفس الرقم مهما اختلف حجم الحروف',argsSeen[0].args.p_serial==='K7M2XQ9T4R' && argsSeen[2].args.p_serial==='HRC-NO-900001');
+  check('lookup_card يرسل p_code الفارغ لأنه وسيط إلزامي بتوقيع RPC',argsSeen[0].args.p_code==='');
+  check('lookup_card ينظّف رمز الطباعة الاختياري',argsSeen[1].args.p_code==='9A7B');
 
   /* عميل كامل الشكل (مثل supabase-js): rest.headers.set قابلة للاعتراض */
   const headerSets = [];

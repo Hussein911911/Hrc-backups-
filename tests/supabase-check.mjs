@@ -201,9 +201,12 @@ try {
   console.log('\n▌ الحالة 0 — تناسق إعداد المشروع بين الملفات');
   {
     const cfgJs = readFileSync(join(ROOT, 'assets', 'js', 'supabase-config.js'), 'utf8');
+    const applyTxt = readFileSync(join(ROOT, 'apply.html'), 'utf8');
     const tomlTxt = readFileSync(join(ROOT, 'supabase', 'config.toml'), 'utf8');
     const url = (cfgJs.match(/url:\s*'([^']+)'/) || [])[1] || '';
     const key = (cfgJs.match(/publishableKey:\s*'([^']+)'/) || [])[1] || '';
+    const applyUrl = (applyTxt.match(/var SUPA_URL='([^']+)'/) || [])[1] || '';
+    const applyKey = (applyTxt.match(/var SUPA_KEY='([^']+)'/) || [])[1] || '';
     const schema = (cfgJs.match(/schema:\s*'([^']+)'/) || [])[1] || '';
     const ref = url.replace(/^https:\/\//, '').replace(/\.supabase\.co.*$/, '');
     const pid = (tomlTxt.match(/project_id\s*=\s*"([^"]+)"/) || [])[1] || '';
@@ -211,6 +214,8 @@ try {
     check('رابط المشروع بصيغة صحيحة', /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(url), url);
     check('معرّف المشروع في supabase/config.toml يطابق الرابط (خطأ كتابي شائع)',
       !!pid && pid === ref, `config.toml="${pid}" مقابل الرابط="${ref}"`);
+    check('صفحة بطاقتي تستخدم نفس رابط Supabase العام', applyUrl === url);
+    check('صفحة بطاقتي تستخدم نفس مفتاح Publishable للمشروع', applyKey === key);
     check('المفتاح العام بصيغة Publishable (لا Secret)',
       /^sb_publishable_/.test(key), key.slice(0, 18) + '…');
     /* نجرّد تعليقات JS أولاً: الملف يحذّر من sb_secret_ داخل تعليق (مقصود).
