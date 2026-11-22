@@ -140,6 +140,11 @@ while ((f = funcRe.exec(stripped(RAW)))) funcs.push({ name: f[1], text: f[0] });
    2026-11-17 (تكملة): +2 تعريفان — غلافا lookup_card و self_service_card
    بلا تقنين (كانا ما زالا يُقنّعان، والإنتاج لا يُقنّع).
    ⇒ 78 تعريفاً و71 دالة فعلية. */
+const relocateImagesSql = RAW.match(/create or replace function brc\.relocate_job_images[\s\S]*?end \$function\$/i)?.[0] || '';
+check('نقل صور الوظائف يستخدم قاعدة النسخة لا قاعدة الأصل',
+  relocateImagesSql.includes('https://kdtatwuycidndsulbnqc.supabase.co') &&
+  !relocateImagesSql.includes('https://vqsvztudvfukyuerzcgx.supabase.co'));
+
 check('تعريفات الدوال: 78 تعريفاً، 71 دالة فعلية (توقيعات توافق مقصودة)',
   funcs.length === 78 && new Set(funcs.map(x=>x.name)).size === 71,
   funcs.length + ' تعريفاً · ' + new Set(funcs.map(x=>x.name)).size + ' دالة');

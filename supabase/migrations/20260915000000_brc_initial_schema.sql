@@ -3463,7 +3463,7 @@ declare
   moved int := 0; failed int := 0; errs jsonb := '[]'::jsonb; ok_list jsonb := '[]'::jsonb;
   base_url text := coalesce(
     nullif(coalesce(current_setting('app.supabase_url', true), ''), ''),
-    'https://vqsvztudvfukyuerzcgx.supabase.co');
+    'https://kdtatwuycidndsulbnqc.supabase.co');
 begin
   if not brc.is_admin() then raise exception 'نقل صور الوظائف صلاحية المدير العام فقط'; end if;
   if to_regclass('storage.buckets') is null then

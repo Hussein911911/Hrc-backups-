@@ -835,10 +835,12 @@
      البطاقات الحالية (بلا رمز مطبوع) تعمل كما هي. */
   function lookupCardRpc(client, serial, code) {
     if (!serial) return Promise.resolve({ ok: false, error: 'أدخل باركود البطاقة' });
-    var body = { p_serial: String(serial).trim().toUpperCase() };
-    /* p_code يُرسَل فقط عند وجود رمز فعلي — الباركود وحده يبقى كافياً
-       للبطاقات التي لا تحمل card_print_code (قرار 2026-10-06 محفوظ). */
-    if (code) body.p_code = String(code).trim();
+    /* p_code مطلوب في توقيع RPC دائماً؛ البطاقة بلا رمز ترسل نصاً فارغاً،
+       والبطاقة ذات رمز مطبوع ترسل القيمة بعد إزالة الفراغات. */
+    var body = {
+      p_serial: String(serial).trim().toUpperCase(),
+      p_code: String(code || '').trim()
+    };
     return rpcCall(client, 'lookup_card', body)
       .then(function (res) {
         if (res && res.error) {

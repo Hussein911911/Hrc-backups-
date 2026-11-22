@@ -692,7 +692,7 @@ section('8.5) النشر — منصّة واحدة (Cloudflare Pages) بلا ر�
     const dist = readFileSync(join(ROOT, 'tools', 'dist.mjs'), 'utf8');
     const leaks = [];
     if (/DEMO-CARD-01|HRC-9001|demo-card/.test(dist)) leaks.push('بيانات العرض داخل tools/dist.mjs');
-    const realHost = /vqsvztudvfukyuerzcgx\.supabase\.co/;
+    const realHost = /kdtatwuycidndsulbnqc\.supabase\.co/;
     const demoBlock = serve.slice(serve.indexOf('DEMO_CARD'), serve.indexOf('const DEMO_CARD_JOBS'));
     if (realHost.test(demoBlock)) leaks.push('عنوان القاعدة الحقيقي داخل كتلة العرض');
     if (!/demo=1/.test(serve)) leaks.push('apply.html لا يُحوَّل في وضع /demo-card');
